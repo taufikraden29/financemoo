@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useLocalStorage } from '../../utils/helpers';
+import { toast } from 'react-hot-toast';
 
 export const useGamification = () => {
   const [userStats, setUserStats] = useLocalStorage("userStats", {
@@ -33,6 +34,7 @@ export const useGamification = () => {
 
   return {
     userStats,
+    setUserStats,
     addXP,
   };
 };

@@ -29,6 +29,7 @@ export const useAchievements = () => {
 
     return {
         achievements,
+        setAchievements,
         unlockAchievement,
         checkAchievement,
     };

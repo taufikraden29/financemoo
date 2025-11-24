@@ -24,6 +24,7 @@ export const useRecurring = () => {
 
   return {
     recurringTransactions,
+    setRecurringTransactions,
     addRecurring,
     deleteRecurring,
     toggleRecurring,

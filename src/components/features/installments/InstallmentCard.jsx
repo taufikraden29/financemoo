@@ -35,26 +35,26 @@ const InstallmentCard = ({ installment, onPay, onDelete, onViewDetails }) => {
     };
 
     return (
-        <div className={`bg-white rounded-2xl shadow-lg border-2 p-6 transition-all hover:shadow-xl ${isOverdue ? 'border-red-300 bg-red-50' : 'border-gray-100'
+        <div className={`bg-white rounded-xl shadow-lg border p-4 transition-all hover:shadow-xl ${isOverdue ? 'border-red-300 bg-red-50' : 'border-gray-100'
             }`}>
             {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">{installment.name}</h3>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start mb-3 gap-2">
+                <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1 truncate">{installment.name}</h3>
                     {installment.creditor && (
-                        <p className="text-sm text-gray-600">{installment.creditor}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">{installment.creditor}</p>
                     )}
                     {installment.description && (
-                        <p className="text-sm text-gray-500 mt-1">{installment.description}</p>
+                        <p className="text-xs sm:text-xs text-gray-500 truncate mt-1">{installment.description}</p>
                     )}
                 </div>
-                <div className="flex items-center space-x-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(instment.status)}`}>
+                <div className="flex flex-wrap gap-1 justify-end">
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(installment.status)}`}>
                         {installment.status === 'active' ? 'Aktif' :
                             installment.status === 'completed' ? 'Selesai' : 'Dibatalkan'}
                     </span>
                     {isOverdue && (
-                        <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                        <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                             {summary.overdueInstallments} Telat
                         </span>
                     )}
@@ -62,14 +62,14 @@ const InstallmentCard = ({ installment, onPay, onDelete, onViewDetails }) => {
             </div>
 
             {/* Progress Section */}
-            <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">Progress</span>
-                    <span className="text-sm font-bold text-gray-900">{summary.progressPercentage}%</span>
+            <div className="mb-3">
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-600">Progress</span>
+                    <span className="text-xs font-bold text-gray-900">{summary.progressPercentage}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                     <div
-                        className={`h-3 rounded-full transition-all duration-500 ${installment.status === 'completed'
+                        className={`h-2 rounded-full transition-all duration-500 ${installment.status === 'completed'
                             ? 'bg-gradient-to-r from-green-500 to-emerald-600'
                             : 'bg-gradient-to-r from-blue-500 to-indigo-600'
                             }`}
@@ -79,32 +79,32 @@ const InstallmentCard = ({ installment, onPay, onDelete, onViewDetails }) => {
             </div>
 
             {/* Financial Details */}
-            <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-3 gap-2 mb-3">
                 <div className="text-center">
-                    <p className="text-xs text-gray-600 mb-1">Total Hutang</p>
-                    <p className="text-lg font-bold text-gray-900">
+                    <p className="text-xs text-gray-600 mb-1">Total</p>
+                    <p className="text-sm font-bold text-gray-900">
                         {formatCurrency(summary.totalAmount)}
                     </p>
                 </div>
                 <div className="text-center">
-                    <p className="text-xs text-gray-600 mb-1">Sisa Hutang</p>
-                    <p className="text-lg font-bold text-orange-600">
+                    <p className="text-xs text-gray-600 mb-1">Sisa</p>
+                    <p className="text-sm font-bold text-orange-600">
                         {formatCurrency(summary.remainingAmount)}
                     </p>
                 </div>
                 <div className="text-center">
-                    <p className="text-xs text-gray-600 mb-1">Cicilan/Bulan</p>
-                    <p className="text-lg font-bold text-blue-600">
+                    <p className="text-xs text-gray-600 mb-1">Cicilan</p>
+                    <p className="text-sm font-bold text-blue-600">
                         {formatCurrency(installment.installmentAmount)}
                     </p>
                 </div>
             </div>
 
             {/* Installment Details */}
-            <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                        <p className="text-gray-600">Total Cicilan</p>
+                        <p className="text-gray-600">Total</p>
                         <p className="font-bold text-gray-900">
                             {summary.paidInstallments} / {summary.totalInstallments}
                         </p>
@@ -130,20 +130,20 @@ const InstallmentCard = ({ installment, onPay, onDelete, onViewDetails }) => {
 
             {/* Next Payment Info */}
             {nextInstallment && (
-                <div className={`rounded-xl p-4 mb-4 ${daysUntilDue < 0 ? 'bg-red-50 border-2 border-red-200' : 'bg-blue-50 border-2 border-blue-200'
+                <div className={`rounded-lg p-3 mb-3 ${daysUntilDue < 0 ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200'
                     }`}>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-700">Pembayaran Berikutnya</p>
-                            <p className="text-xl font-bold text-gray-900">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <div className="flex-1">
+                            <p className="text-xs font-medium text-gray-700">Pembayaran Berikutnya</p>
+                            <p className="text-lg font-bold text-gray-900">
                                 {formatCurrency(nextInstallment.amount)}
                             </p>
-                            <p className="text-xs text-gray-600 mt-1">
+                            <p className="text-xs text-gray-600">
                                 Cicilan #{nextInstallment.installmentNumber}
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className={`text-sm font-bold ${daysUntilDue < 0 ? 'text-red-600' :
+                            <p className={`text-xs sm:text-sm font-bold ${daysUntilDue < 0 ? 'text-red-600' :
                                 daysUntilDue <= 3 ? 'text-orange-600' : 'text-blue-600'
                                 }`}>
                                 {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} hari terlambat` :
@@ -160,23 +160,23 @@ const InstallmentCard = ({ installment, onPay, onDelete, onViewDetails }) => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-1 sm:gap-2">
                 <button
                     onClick={() => onViewDetails(installment)}
-                    className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-all"
+                    className="flex-1 bg-blue-600 text-white py-2 sm:py-3 rounded-lg font-medium hover:bg-blue-700 transition-all text-sm min-w-[80px]"
                 >
-                    Lihat Detail
+                    Detail
                 </button>
                 <button
                     onClick={() => onPay(installment.id, installment.installmentAmount)}
-                    className="flex-1 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700 transition-all"
+                    className="flex-1 bg-green-600 text-white py-2 sm:py-3 rounded-lg font-medium hover:bg-green-700 transition-all text-sm min-w-[80px]"
                     disabled={installment.status === 'completed'}
                 >
-                    Bayar Cicilan
+                    Bayar
                 </button>
                 <button
                     onClick={() => onDelete(installment.id)}
-                    className="bg-red-500 text-white px-4 py-3 rounded-xl font-medium hover:bg-red-600 transition-all"
+                    className="bg-red-500 text-white px-3 py-2 sm:py-3 rounded-lg font-medium hover:bg-red-600 transition-all text-sm"
                     title="Hapus Cicilan"
                 >
                     ×

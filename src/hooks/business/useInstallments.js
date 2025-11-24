@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useLocalStorage } from '../../utils/helpers';
 import {
     generateInstallmentSchedule,
     updatePaymentSchedule,
@@ -9,15 +10,7 @@ import {
 } from '../../utils/calculations';
 
 export const useInstallments = () => {
-    const [installments, setInstallments] = useState(() => {
-        const saved = localStorage.getItem('installments');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    // Save to localStorage whenever installments change
-    useEffect(() => {
-        localStorage.setItem('installments', JSON.stringify(installments));
-    }, [installments]);
+    const [installments, setInstallments] = useLocalStorage("installments", []);
 
     /**
      * Add a new installment debt
