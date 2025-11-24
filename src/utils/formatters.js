@@ -47,3 +47,25 @@ export const calculatePercentage = (value, total) => {
   if (total === 0) return 0;
   return (value / total) * 100;
 };
+
+export const formatCurrencyInput = (value) => {
+  // Remove all non-numeric characters except for handling backspace properly
+  let numericValue = value.replace(/\D/g, '');
+
+  // Convert to number and format with thousands separators
+  if (numericValue) {
+    const numValue = parseInt(numericValue, 10);
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(numValue);
+  }
+
+  return '';
+};
+
+export const parseCurrencyInput = (formattedValue) => {
+  // Remove currency symbols and return only the numeric value
+  return formattedValue.replace(/[^\d]/g, '') || '';
+};

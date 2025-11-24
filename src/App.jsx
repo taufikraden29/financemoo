@@ -43,79 +43,114 @@ const FinanceApp = () => {
   const [showDebtModal, setShowDebtModal] = useState(false);
   const [showRecurringModal, setShowRecurringModal] = useState(false);
   const [transactionType, setTransactionType] = useState("expense");
+  const [paymentMethod, setPaymentMethod] = useState("cash"); // cash or digital
   const [hideBalance, setHideBalance] = useState(false);
+
+  // Cash Account Management
+  const [cashAccounts, setCashAccounts] = useState(() => {
+    const saved = localStorage.getItem('cashAccounts');
+    return saved ? JSON.parse(saved) : [
+      { id: 'main-cash', name: 'Dompet Utama', balance: 0, type: 'cash' }
+    ];
+  });
+  const [showCashAccountModal, setShowCashAccountModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [cashAccountForm, setCashAccountForm] = useState({
+    name: '',
+    initialBalance: 0
+  });
+  const [transferForm, setTransferForm] = useState({
+    fromAccount: '',
+    toAccount: '',
+    amount: 0,
+    description: ''
+  });
+
+  // Functions for cash account management
+  const handleAddCashAccount = () => {
+    if (!cashAccountForm.name || parseFloat(cashAccountForm.initialBalance) < 0) return;
+
+    const newAccount = {
+      id: `cash-${Date.now()}`,
+      name: cashAccountForm.name,
+      balance: parseFloat(cashAccountForm.initialBalance),
+      type: 'cash'
+    };
+
+    setCashAccounts([...cashAccounts, newAccount]);
+    setCashAccountForm({ name: '', initialBalance: 0 });
+    setShowCashAccountModal(false);
+  };
+
+  const handleCashTransfer = () => {
+    if (!transferForm.fromAccount || !transferForm.toAccount ||
+        parseFloat(transferForm.amount) <= 0 ||
+        transferForm.fromAccount === transferForm.toAccount) return;
+
+    const fromAccount = cashAccounts.find(acc => acc.id === transferForm.fromAccount);
+    const toAccount = cashAccounts.find(acc => acc.id === transferForm.toAccount);
+
+    if (!fromAccount || !toAccount) return;
+    if (fromAccount.balance < parseFloat(transferForm.amount)) return;
+
+    // Update cash accounts
+    setCashAccounts(cashAccounts.map(account => {
+      if (account.id === fromAccount.id) {
+        return { ...account, balance: account.balance - parseFloat(transferForm.amount) };
+      }
+      if (account.id === toAccount.id) {
+        return { ...account, balance: account.balance + parseFloat(transferForm.amount) };
+      }
+      return account;
+    }));
+
+    // Add transfer as a transaction
+    const transferTransaction = {
+      id: Date.now() + Math.random(), // Make sure it's unique
+      type: "transfer",
+      amount: parseFloat(transferForm.amount),
+      category: "Transfer",
+      description: transferForm.description || `Transfer from ${fromAccount.name} to ${toAccount.name}`,
+      date: new Date().toISOString().split("T")[0],
+      paymentMethod: "transfer",
+      fromAccount: fromAccount.name,
+      toAccount: toAccount.name,
+      icon: "Repeat",
+    };
+
+    setTransactions([transferTransaction, ...transactions]);
+
+    // Reset form and close modal
+    setTransferForm({
+      fromAccount: '',
+      toAccount: '',
+      amount: 0,
+      description: ''
+    });
+    setShowTransferModal(false);
+  };
   const [showNotification, setShowNotification] = useState(false);
   const [showAchievementNotification, setShowAchievementNotification] = useState(null);
 
-  const [transactions, setTransactions] = useState([
-    {
-      id: 1,
-      type: "income",
-      amount: 5000000,
-      category: "Gaji",
-      description: "Gaji Bulanan",
-      date: "2024-11-01",
-      icon: "DollarSign",
-    },
-    {
-      id: 2,
-      type: "expense",
-      amount: 500000,
-      category: "Makanan",
-      description: "Groceries",
-      date: "2024-11-05",
-      icon: "ShoppingBag",
-    },
-    {
-      id: 3,
-      type: "expense",
-      amount: 200000,
-      category: "Transport",
-      description: "Bensin",
-      date: "2024-11-10",
-      icon: "Car",
-    },
-    {
-      id: 4,
-      type: "expense",
-      amount: 150000,
-      category: "Hiburan",
-      description: "Nonton Film",
-      date: "2024-11-15",
-      icon: "Coffee",
-    },
-    {
-      id: 5,
-      type: "income",
-      amount: 1000000,
-      category: "Freelance",
-      description: "Project Web",
-      date: "2024-11-18",
-      icon: "TrendingUp",
-    },
-    {
-      id: 6,
-      type: "expense",
-      amount: 300000,
-      category: "Belanja",
-      description: "Baju",
-      date: "2024-11-20",
-      icon: "ShoppingBag",
-    },
-  ]);
-
-  const [budgets, setBudgets] = useState({
-    Makanan: { limit: 1500000, spent: 500000 },
-    Transport: { limit: 500000, spent: 200000 },
-    Hiburan: { limit: 500000, spent: 150000 },
-    Belanja: { limit: 1000000, spent: 300000 },
+  // Initialize state from localStorage
+  const [transactions, setTransactions] = useState(() => {
+    const saved = localStorage.getItem('transactions');
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const [savingsGoal, setSavingsGoal] = useState({
-    target: 10000000,
-    current: 3500000,
-    name: "Emergency Fund",
-    deadline: "2025-12-31",
+  const [budgets, setBudgets] = useState(() => {
+    const saved = localStorage.getItem('budgets');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [savingsGoal, setSavingsGoal] = useState(() => {
+    const saved = localStorage.getItem('savingsGoal');
+    return saved ? JSON.parse(saved) : {
+      target: 0,
+      current: 0,
+      name: "",
+      deadline: "",
+    };
   });
 
   const [formData, setFormData] = useState({
@@ -123,6 +158,8 @@ const FinanceApp = () => {
     category: "",
     description: "",
     date: new Date().toISOString().split("T")[0],
+    paymentMethod: "cash", // cash or digital
+    cashAccount: cashAccounts[0]?.id || '', // Default to first cash account
   });
 
   const [budgetForm, setBudgetForm] = useState({
@@ -131,30 +168,10 @@ const FinanceApp = () => {
   });
 
   // Debt Tracker State
-  const [debts, setDebts] = useState([
-    {
-      id: 1,
-      name: "Pinjaman Bank",
-      type: "payable",
-      totalAmount: 10000000,
-      paidAmount: 3000000,
-      dueDate: "2025-12-31",
-      creditor: "BCA",
-      interestRate: 5,
-      createdAt: "2024-01-15",
-    },
-    {
-      id: 2,
-      name: "Hutang ke Teman",
-      type: "payable",
-      totalAmount: 2000000,
-      paidAmount: 500000,
-      dueDate: "2025-06-30",
-      creditor: "John Doe",
-      interestRate: 0,
-      createdAt: "2024-10-10",
-    },
-  ]);
+  const [debts, setDebts] = useState(() => {
+    const saved = localStorage.getItem('debts');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const [debtForm, setDebtForm] = useState({
     name: "",
@@ -167,32 +184,10 @@ const FinanceApp = () => {
   });
 
   // Recurring Transactions State
-  const [recurringTransactions, setRecurringTransactions] = useState([
-    {
-      id: 1,
-      type: "expense",
-      amount: 500000,
-      category: "Tagihan",
-      description: "Listrik Bulanan",
-      frequency: "monthly",
-      startDate: "2024-01-01",
-      nextDate: "2025-01-01",
-      isActive: true,
-      icon: "CreditCard",
-    },
-    {
-      id: 2,
-      type: "income",
-      amount: 5000000,
-      category: "Gaji",
-      description: "Gaji Bulanan",
-      frequency: "monthly",
-      startDate: "2024-01-01",
-      nextDate: "2025-01-01",
-      isActive: true,
-      icon: "DollarSign",
-    },
-  ]);
+  const [recurringTransactions, setRecurringTransactions] = useState(() => {
+    const saved = localStorage.getItem('recurringTransactions');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const [recurringForm, setRecurringForm] = useState({
     amount: "",
@@ -200,26 +195,34 @@ const FinanceApp = () => {
     description: "",
     frequency: "monthly",
     startDate: new Date().toISOString().split("T")[0],
+    paymentMethod: "cash",
+    cashAccount: cashAccounts[0]?.id || '', // Default to first cash account
   });
 
   // Gamification State
-  const [userStats, setUserStats] = useState({
-    level: 5,
-    xp: 350,
-    xpToNextLevel: 500,
-    totalTransactions: 42,
-    streakDays: 7,
-    coinsEarned: 450,
+  const [userStats, setUserStats] = useState(() => {
+    const saved = localStorage.getItem('userStats');
+    return saved ? JSON.parse(saved) : {
+      level: 1,
+      xp: 0,
+      xpToNextLevel: 100,
+      totalTransactions: 0,
+      streakDays: 0,
+      coinsEarned: 0,
+    };
   });
 
-  const [achievements, setAchievements] = useState([
-    { id: 1, name: "First Transaction", description: "Add your first transaction", unlocked: true, icon: "Star", reward: 50 },
-    { id: 2, name: "Budget Master", description: "Set budget for 5 categories", unlocked: true, icon: "Target", reward: 100 },
-    { id: 3, name: "Savings Hero", description: "Save 20% of income", unlocked: false, icon: "Trophy", reward: 150 },
-    { id: 4, name: "Debt Free", description: "Pay off all debts", unlocked: false, icon: "CheckCircle", reward: 200 },
-    { id: 5, name: "Consistent Tracker", description: "7-day tracking streak", unlocked: true, icon: "Zap", reward: 100 },
-    { id: 6, name: "Budget Guardian", description: "Stay under budget for 3 months", unlocked: false, icon: "Award", reward: 250 },
-  ]);
+  const [achievements, setAchievements] = useState(() => {
+    const saved = localStorage.getItem('achievements');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: "First Transaction", description: "Add your first transaction", unlocked: false, icon: "Star", reward: 50 },
+      { id: 2, name: "Budget Master", description: "Set budget for 5 categories", unlocked: false, icon: "Target", reward: 100 },
+      { id: 3, name: "Savings Hero", description: "Save 20% of income", unlocked: false, icon: "Trophy", reward: 150 },
+      { id: 4, name: "Debt Free", description: "Pay off all debts", unlocked: false, icon: "CheckCircle", reward: 200 },
+      { id: 5, name: "Consistent Tracker", description: "7-day tracking streak", unlocked: false, icon: "Zap", reward: 100 },
+      { id: 6, name: "Budget Guardian", description: "Stay under budget for 3 months", unlocked: false, icon: "Award", reward: 250 },
+    ];
+  });
 
   const categories = {
     income: [
@@ -241,6 +244,39 @@ const FinanceApp = () => {
     ],
   };
 
+  // Save data to localStorage when states change
+  useEffect(() => {
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+  }, [transactions]);
+
+  useEffect(() => {
+    localStorage.setItem('budgets', JSON.stringify(budgets));
+  }, [budgets]);
+
+  useEffect(() => {
+    localStorage.setItem('savingsGoal', JSON.stringify(savingsGoal));
+  }, [savingsGoal]);
+
+  useEffect(() => {
+    localStorage.setItem('debts', JSON.stringify(debts));
+  }, [debts]);
+
+  useEffect(() => {
+    localStorage.setItem('recurringTransactions', JSON.stringify(recurringTransactions));
+  }, [recurringTransactions]);
+
+  useEffect(() => {
+    localStorage.setItem('userStats', JSON.stringify(userStats));
+  }, [userStats]);
+
+  useEffect(() => {
+    localStorage.setItem('achievements', JSON.stringify(achievements));
+  }, [achievements]);
+
+  useEffect(() => {
+    localStorage.setItem('cashAccounts', JSON.stringify(cashAccounts));
+  }, [cashAccounts]);
+
   const totalIncome = transactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -250,6 +286,27 @@ const FinanceApp = () => {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const balance = totalIncome - totalExpense;
+
+  // Cash flow calculations
+  const cashIncome = transactions
+    .filter((t) => t.type === "income" && t.paymentMethod === "cash")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const cashExpense = transactions
+    .filter((t) => t.type === "expense" && t.paymentMethod === "cash")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const digitalIncome = transactions
+    .filter((t) => t.type === "income" && t.paymentMethod === "digital")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const digitalExpense = transactions
+    .filter((t) => t.type === "expense" && t.paymentMethod === "digital")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Calculate total cash balance from all cash accounts
+  const cashBalance = cashAccounts.reduce((sum, account) => sum + account.balance, 0);
+  const digitalBalance = digitalIncome - digitalExpense;
 
   // Calculate total debts
   const totalDebt = debts.reduce((sum, debt) => sum + (debt.totalAmount - debt.paidAmount), 0);
@@ -287,10 +344,34 @@ const FinanceApp = () => {
       category: formData.category,
       description: formData.description,
       date: formData.date,
+      paymentMethod: paymentMethod, // Use the state variable
       icon:
         categories[transactionType].find((c) => c.name === formData.category)
           ?.icon || "MoreHorizontal",
     };
+
+    // If it's cash, update the selected cash account
+    let updatedCashAccounts = [...cashAccounts];
+    if (paymentMethod === "cash" && formData.cashAccount) {
+      const accountIndex = updatedCashAccounts.findIndex(acc => acc.id === formData.cashAccount);
+      if (accountIndex !== -1) {
+        if (transactionType === "income") {
+          updatedCashAccounts[accountIndex] = {
+            ...updatedCashAccounts[accountIndex],
+            balance: updatedCashAccounts[accountIndex].balance + parseFloat(formData.amount)
+          };
+        } else if (transactionType === "expense") {
+          updatedCashAccounts[accountIndex] = {
+            ...updatedCashAccounts[accountIndex],
+            balance: Math.max(0, updatedCashAccounts[accountIndex].balance - parseFloat(formData.amount))
+          };
+        }
+        setCashAccounts(updatedCashAccounts);
+      }
+    }
+
+    // Check for first transaction achievement - since this will be the first transaction
+    const isFirstTransaction = transactions.length === 0;
 
     setTransactions([newTransaction, ...transactions]);
 
@@ -311,19 +392,21 @@ const FinanceApp = () => {
       category: "",
       description: "",
       date: new Date().toISOString().split("T")[0],
+      paymentMethod: "cash",
+      cashAccount: cashAccounts[0]?.id || '',
     });
 
     // Add XP for adding transaction
     addXP(15);
-    
+
     // Update user stats
-    setUserStats(prev => ({ 
-      ...prev, 
-      totalTransactions: prev.totalTransactions + 1 
+    setUserStats(prev => ({
+      ...prev,
+      totalTransactions: prev.totalTransactions + 1
     }));
 
-    // Check for first transaction achievement
-    if (transactions.length === 0) {
+    // Check for first transaction achievement - since this was the first transaction
+    if (isFirstTransaction) {
       checkAchievement("First Transaction");
     }
   };
@@ -408,9 +491,13 @@ const FinanceApp = () => {
       startDate: recurringForm.startDate,
       nextDate: calculateNextDate(recurringForm.startDate, recurringForm.frequency),
       isActive: true,
+      paymentMethod: paymentMethod, // Use the state variable
+      cashAccount: recurringForm.cashAccount || cashAccounts[0]?.id, // Include selected cash account
       icon: categories[transactionType].find((c) => c.name === recurringForm.category)?.icon || "MoreHorizontal",
     };
 
+    // If it's cash, the recurring transaction will affect the selected cash account when it occurs
+    // For now, just add the transaction to the list
     setRecurringTransactions([...recurringTransactions, newRecurring]);
     setShowRecurringModal(false);
     setRecurringForm({
@@ -419,6 +506,8 @@ const FinanceApp = () => {
       description: "",
       frequency: "monthly",
       startDate: new Date().toISOString().split("T")[0],
+      paymentMethod: "cash",
+      cashAccount: cashAccounts[0]?.id || '',
     });
 
     addXP(25);
@@ -618,6 +707,21 @@ const FinanceApp = () => {
                   <Eye className="w-5 h-5 text-gray-600" />
                 )}
               </button>
+              {/* Cash Management Buttons */}
+              <button
+                onClick={() => setShowCashAccountModal(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Tambah Dompet Cash"
+              >
+                <Wallet className="w-5 h-5 text-green-600" />
+              </button>
+              <button
+                onClick={() => setShowTransferModal(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Transfer Cash"
+              >
+                <Repeat className="w-5 h-5 text-blue-600" />
+              </button>
               <button
                 onClick={() => setShowAddModal(true)}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg md:rounded-xl flex items-center space-x-1 md:space-x-2 hover:shadow-lg transition-all duration-200 hover:scale-105"
@@ -720,6 +824,23 @@ const FinanceApp = () => {
             </p>
             <p className="text-orange-600 text-xs font-medium">
               {debts.length} hutang aktif
+            </p>
+          </div>
+
+          {/* Cash Balance Card */}
+          <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl md:rounded-2xl p-4 md:p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 md:hover:scale-105">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-green-100 text-xs md:text-sm font-medium">
+                Cash Balance
+              </p>
+              <Wallet className="w-4 h-4 md:w-5 md:h-5 text-green-200" />
+            </div>
+            <p className="text-2xl md:text-3xl font-bold mb-1">
+              {formatCurrency(cashBalance)}
+            </p>
+            <p className="text-green-200 text-xs flex items-center">
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Cash: {formatCurrency(cashIncome)} in, {formatCurrency(cashExpense)} out
             </p>
           </div>
         </div>
@@ -841,6 +962,30 @@ const FinanceApp = () => {
         {/* Content Area */}
         {activeTab === "overview" && (
           <div className="space-y-4 md:space-y-6">
+            {/* Cash Accounts Overview */}
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl md:rounded-2xl p-4 md:p-6 text-white shadow-xl">
+              <h3 className="text-base md:text-lg font-bold mb-3 flex items-center">
+                <Wallet className="w-5 h-5 mr-2" />
+                Dompet Cash
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                {cashAccounts.length > 0 ? (
+                  cashAccounts.map((account) => (
+                    <div key={account.id} className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+                      <p className="text-xs opacity-90 mb-1 truncate">{account.name}</p>
+                      <p className="font-bold text-sm md:text-base">
+                        {formatCurrency(account.balance)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 col-span-2 text-center">
+                    <p className="text-xs opacity-90">Belum ada dompet cash</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Financial Insights */}
             <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl md:rounded-2xl p-4 md:p-6 text-white shadow-xl">
               <h3 className="text-base md:text-lg font-bold mb-3 flex items-center">
@@ -934,9 +1079,18 @@ const FinanceApp = () => {
                           />
                         </div>
                         <div>
-                          <p className="font-semibold text-sm md:text-base text-gray-900">
-                            {transaction.category}
-                          </p>
+                          <div className="flex items-center space-x-1">
+                            <p className="font-semibold text-sm md:text-base text-gray-900">
+                              {transaction.category}
+                            </p>
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                              transaction.paymentMethod === "cash"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}>
+                              {transaction.paymentMethod === "cash" ? "C" : "D"}
+                            </span>
+                          </div>
                           <p className="text-xs md:text-sm text-gray-500">
                             {transaction.description}
                           </p>
@@ -1124,9 +1278,18 @@ const FinanceApp = () => {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm md:text-base text-gray-900 truncate">
-                          {transaction.category}
-                        </p>
+                        <div className="flex items-center space-x-2">
+                          <p className="font-semibold text-sm md:text-base text-gray-900 truncate">
+                            {transaction.category}
+                          </p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            transaction.paymentMethod === "cash"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}>
+                            {transaction.paymentMethod === "cash" ? "Cash" : "Digital"}
+                          </span>
+                        </div>
                         <p className="text-xs md:text-sm text-gray-500 truncate">
                           {transaction.description}
                         </p>
@@ -1685,11 +1848,16 @@ const FinanceApp = () => {
                     Rp
                   </span>
                   <input
-                    type="number"
-                    value={formData.amount}
-                    onChange={(e) =>
-                      setFormData({ ...formData, amount: e.target.value })
-                    }
+                    type="text"
+                    value={formData.amount ? new Intl.NumberFormat("id-ID", {
+                      style: "decimal",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(formData.amount) : ""}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      setFormData({ ...formData, amount: numericValue });
+                    }}
                     className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
                     placeholder="0"
                   />
@@ -1730,6 +1898,59 @@ const FinanceApp = () => {
                   })}
                 </div>
               </div>
+
+              {/* Payment Method Selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Metode Pembayaran
+                </label>
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("cash")}
+                    className={`flex-1 py-2.5 px-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                      paymentMethod === "cash"
+                        ? "bg-green-100 text-green-700 border-2 border-green-500"
+                        : "bg-gray-100 text-gray-700 border-2 border-gray-200"
+                    }`}
+                  >
+                    Cash
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("digital")}
+                    className={`flex-1 py-2.5 px-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                      paymentMethod === "digital"
+                        ? "bg-blue-100 text-blue-700 border-2 border-blue-500"
+                        : "bg-gray-100 text-gray-700 border-2 border-gray-200"
+                    }`}
+                  >
+                    Digital
+                  </button>
+                </div>
+              </div>
+
+              {/* Cash Account Selector (only shown when payment method is cash) */}
+              {paymentMethod === "cash" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dompet Cash
+                  </label>
+                  <select
+                    value={formData.cashAccount}
+                    onChange={(e) =>
+                      setFormData({ ...formData, cashAccount: e.target.value })
+                    }
+                    className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  >
+                    {cashAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} (Rp {new Intl.NumberFormat("id-ID").format(account.balance)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1829,11 +2050,16 @@ const FinanceApp = () => {
                     Rp
                   </span>
                   <input
-                    type="number"
-                    value={budgetForm.limit}
-                    onChange={(e) =>
-                      setBudgetForm({ ...budgetForm, limit: e.target.value })
-                    }
+                    type="text"
+                    value={budgetForm.limit ? new Intl.NumberFormat("id-ID", {
+                      style: "decimal",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(budgetForm.limit) : ""}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      setBudgetForm({ ...budgetForm, limit: numericValue });
+                    }}
                     className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     placeholder="0"
                   />
@@ -1920,11 +2146,16 @@ const FinanceApp = () => {
                     Rp
                   </span>
                   <input
-                    type="number"
-                    value={debtForm.totalAmount}
-                    onChange={(e) =>
-                      setDebtForm({ ...debtForm, totalAmount: e.target.value })
-                    }
+                    type="text"
+                    value={debtForm.totalAmount ? new Intl.NumberFormat("id-ID", {
+                      style: "decimal",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(debtForm.totalAmount) : ""}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      setDebtForm({ ...debtForm, totalAmount: numericValue });
+                    }}
                     className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
                     placeholder="0"
                   />
@@ -1940,11 +2171,16 @@ const FinanceApp = () => {
                     Rp
                   </span>
                   <input
-                    type="number"
-                    value={debtForm.paidAmount}
-                    onChange={(e) =>
-                      setDebtForm({ ...debtForm, paidAmount: e.target.value })
-                    }
+                    type="text"
+                    value={debtForm.paidAmount ? new Intl.NumberFormat("id-ID", {
+                      style: "decimal",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(debtForm.paidAmount) : ""}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      setDebtForm({ ...debtForm, paidAmount: numericValue });
+                    }}
                     className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
                     placeholder="0"
                   />
@@ -2067,11 +2303,16 @@ const FinanceApp = () => {
                     Rp
                   </span>
                   <input
-                    type="number"
-                    value={recurringForm.amount}
-                    onChange={(e) =>
-                      setRecurringForm({ ...recurringForm, amount: e.target.value })
-                    }
+                    type="text"
+                    value={recurringForm.amount ? new Intl.NumberFormat("id-ID", {
+                      style: "decimal",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(recurringForm.amount) : ""}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      setRecurringForm({ ...recurringForm, amount: numericValue });
+                    }}
                     className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
                     placeholder="0"
                   />
@@ -2097,6 +2338,59 @@ const FinanceApp = () => {
                   ))}
                 </select>
               </div>
+
+              {/* Payment Method Selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Metode Pembayaran
+                </label>
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("cash")}
+                    className={`flex-1 py-2.5 px-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                      paymentMethod === "cash"
+                        ? "bg-green-100 text-green-700 border-2 border-green-500"
+                        : "bg-gray-100 text-gray-700 border-2 border-gray-200"
+                    }`}
+                  >
+                    Cash
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("digital")}
+                    className={`flex-1 py-2.5 px-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                      paymentMethod === "digital"
+                        ? "bg-blue-100 text-blue-700 border-2 border-blue-500"
+                        : "bg-gray-100 text-gray-700 border-2 border-gray-200"
+                    }`}
+                  >
+                    Digital
+                  </button>
+                </div>
+              </div>
+
+              {/* Cash Account Selector (only shown when payment method is cash) */}
+              {paymentMethod === "cash" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dompet Cash
+                  </label>
+                  <select
+                    value={recurringForm.cashAccount}
+                    onChange={(e) =>
+                      setRecurringForm({ ...recurringForm, cashAccount: e.target.value })
+                    }
+                    className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  >
+                    {cashAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} (Rp {new Intl.NumberFormat("id-ID").format(account.balance)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2150,6 +2444,208 @@ const FinanceApp = () => {
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 md:py-4 rounded-xl font-bold hover:shadow-xl transition-all duration-200 active:scale-95 md:hover:scale-105 mt-4 md:mt-6 text-sm md:text-base"
               >
                 Add Recurring Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Cash Account Modal */}
+      {showCashAccountModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+          <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full md:max-w-md md:w-full p-5 md:p-6 transform transition-all">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900">
+                Tambah Dompet Cash
+              </h3>
+              <button
+                onClick={() => setShowCashAccountModal(false)}
+                className="text-gray-400 hover:text-gray-600 active:text-gray-800 transition-colors p-1"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nama Dompet
+                </label>
+                <input
+                  type="text"
+                  value={cashAccountForm.name}
+                  onChange={(e) =>
+                    setCashAccountForm({ ...cashAccountForm, name: e.target.value })
+                  }
+                  className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
+                  placeholder="e.g., Dompet Utama, Simpanan"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Saldo Awal
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm md:text-base">
+                    Rp
+                  </span>
+                  <input
+                    type="text"
+                    value={cashAccountForm.initialBalance ? new Intl.NumberFormat("id-ID", {
+                      style: "decimal",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(cashAccountForm.initialBalance) : ""}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      setCashAccountForm({ ...cashAccountForm, initialBalance: numericValue });
+                    }}
+                    className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleAddCashAccount}
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 md:py-4 rounded-xl font-bold hover:shadow-xl transition-all duration-200 active:scale-95 md:hover:scale-105 mt-4 md:mt-6 text-sm md:text-base"
+              >
+                Tambah Dompet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cash Transfer Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+          <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full md:max-w-md md:w-full p-5 md:p-6 transform transition-all">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900">
+                Transfer Cash
+              </h3>
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="text-gray-400 hover:text-gray-600 active:text-gray-800 transition-colors p-1"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Dari Dompet
+                </label>
+                <select
+                  value={transferForm.fromAccount}
+                  onChange={(e) =>
+                    setTransferForm({ ...transferForm, fromAccount: e.target.value })
+                  }
+                  className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Pilih dompet asal</option>
+                  {cashAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} (Rp {new Intl.NumberFormat("id-ID").format(account.balance)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ke Dompet
+                </label>
+                <select
+                  value={transferForm.toAccount}
+                  onChange={(e) =>
+                    setTransferForm({ ...transferForm, toAccount: e.target.value })
+                  }
+                  className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Pilih dompet tujuan</option>
+                  {cashAccounts
+                    .filter(account => account.id !== transferForm.fromAccount)
+                    .map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} (Rp {new Intl.NumberFormat("id-ID").format(account.balance)})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Jumlah
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm md:text-base">
+                    Rp
+                  </span>
+                  <input
+                    type="text"
+                    value={transferForm.amount ? new Intl.NumberFormat("id-ID", {
+                      style: "decimal",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(transferForm.amount) : ""}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      setTransferForm({ ...transferForm, amount: numericValue });
+                    }}
+                    className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Deskripsi (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={transferForm.description}
+                  onChange={(e) =>
+                    setTransferForm({ ...transferForm, description: e.target.value })
+                  }
+                  className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
+                  placeholder="Catatan transfer..."
+                />
+              </div>
+
+              <button
+                onClick={handleCashTransfer}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 md:py-4 rounded-xl font-bold hover:shadow-xl transition-all duration-200 active:scale-95 md:hover:scale-105 mt-4 md:mt-6 text-sm md:text-base"
+              >
+                Transfer
               </button>
             </div>
           </div>
