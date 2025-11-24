@@ -1,0 +1,51 @@
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  ShoppingBag,
+  Car,
+  Coffee,
+  CreditCard,
+  Heart,
+  Smartphone,
+  Home,
+  MoreHorizontal,
+  Target,
+  Repeat,
+  Users,
+  Trophy,
+  Star,
+  Gift,
+  Award,
+  Zap,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+
+const iconMap = {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  ShoppingBag,
+  Car,
+  Coffee,
+  CreditCard,
+  Heart,
+  Smartphone,
+  Home,
+  MoreHorizontal,
+  Target,
+  Repeat,
+  Users,
+  Trophy,
+  Star,
+  Gift,
+  Award,
+  Zap,
+  CheckCircle,
+  XCircle,
+};
+
+export const getIconComponent = (iconName) => {
+  return iconMap[iconName] || MoreHorizontal;
+};
