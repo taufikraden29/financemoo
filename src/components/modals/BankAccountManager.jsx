@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Plus, CreditCard, Building, User, Hash, Eye, EyeOff } from 'lucide-react';
 import { useLocalStorage } from '../../utils/helpers';
 import { formatCurrency } from '../../utils/formatters/formatters';
+import { toast } from 'react-hot-toast';
 
 const BankAccountManager = ({ isOpen, onClose, bankAccounts, setBankAccounts }) => {
   const [formData, setFormData] = useState({
@@ -46,13 +47,15 @@ const BankAccountManager = ({ isOpen, onClose, bankAccounts, setBankAccounts }) 
   };
 
   const handleDeleteAccount = (accountId) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus rekening ini? Transaksi terkait tidak akan dihapus.')) {
+    const shouldDelete = window.confirm('Apakah Anda yakin ingin menghapus rekening ini? Transaksi terkait tidak akan dihapus.');
+    if (shouldDelete) {
       setBankAccounts(prev => prev.filter(acc => acc.id !== accountId));
+      toast.success('Rekening bank berhasil dihapus!');
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useInstallments } from '../../../hooks/business/useInstallments';
 import { formatCurrency } from '../../../utils/formatters/formatters';
+import { toast } from 'react-hot-toast';
 import InstallmentCard from './InstallmentCard';
 import AddInstallmentModal from './AddInstallmentModal';
 import InstallmentDetails from './InstallmentDetails';
+import { ConfirmModal } from '../../ui';
 
 const InstallmentManager = () => {
     const {
@@ -22,6 +24,7 @@ const InstallmentManager = () => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showPayModal, setShowPayModal] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState({ id: null, amount: 0 });
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, installmentId: null, installment: null });
 
     const installmentsWithSummary = getInstallmentsWithSummary();
     const statistics = getTotalStatistics();
@@ -39,18 +42,31 @@ const InstallmentManager = () => {
 
     const confirmPayment = () => {
         const result = makePayment(selectedPayment.id, selectedPayment.amount);
+
         if (result.paymentInfo.isFullyPaid) {
-            alert('🎉 Selamat! Cicilan telah lunas dibayar!');
+            toast.success('🎉 Selamat! Cicilan telah lunas dibayar!');
         } else {
-            alert(`✅ Pembayaran berhasil! ${result.paymentInfo.installmentsPaid} cicilan telah dibayar.`);
+            toast.success(`✅ Pembayaran berhasil! ${result.paymentInfo.installmentsPaid} cicilan telah dibayar.`);
         }
+
         setShowPayModal(false);
         setSelectedPayment({ id: null, amount: 0 });
     };
 
     const handleDelete = (installmentId) => {
-        if (window.confirm('Apakah Anda yakin ingin menghapus cicilan ini? Tindakan ini tidak dapat dibatalkan.')) {
-            deleteInstallment(installmentId);
+        const installment = installments.find(i => i.id === installmentId);
+        setDeleteModal({
+            isOpen: true,
+            installmentId,
+            installment
+        });
+    };
+
+    const confirmDelete = () => {
+        if (deleteModal.installmentId) {
+            deleteInstallment(deleteModal.installmentId);
+            toast.success('Cicilan berhasil dihapus!');
+            setDeleteModal({ isOpen: false, installmentId: null, installment: null });
         }
     };
 
@@ -66,7 +82,7 @@ const InstallmentManager = () => {
                     <span className="text-blue-100 text-xs font-medium">Total Hutang</span>
                     <div className="bg-white/20 p-1.5 rounded-lg">
                         <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                 </div>
@@ -119,7 +135,7 @@ const InstallmentManager = () => {
         if (!showPayModal) return null;
 
         return (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-4 sm:p-6">
                     <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Konfirmasi Pembayaran</h3>
                     <div className="bg-blue-50 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
@@ -224,6 +240,17 @@ const InstallmentManager = () => {
             )}
 
             {renderPayModal()}
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, installmentId: null, installment: null })}
+                onConfirm={confirmDelete}
+                title="Hapus Cicilan"
+                message={`Apakah Anda yakin ingin menghapus cicilan "${deleteModal.installment?.name || 'ini'}"? Tindakan ini tidak dapat dibatalkan.`}
+                confirmText="Hapus"
+                type="danger"
+            />
         </div>
     );
 };

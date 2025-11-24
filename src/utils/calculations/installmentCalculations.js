@@ -87,6 +87,25 @@ export const calculateRemainingDebt = (paymentSchedule) => {
 };
 
 /**
+ * Calculate remaining debt balance (recalculated without relying on status)
+ * @param {Array} paymentSchedule - Array of installment payment schedule
+ * @returns {number} Remaining debt amount
+ */
+export const calculateRemainingDebtRecalculated = (paymentSchedule) => {
+    if (!paymentSchedule || paymentSchedule.length === 0) {
+        return 0;
+    }
+
+    let remaining = 0;
+    paymentSchedule.forEach(installment => {
+        if (installment.status !== 'paid') {
+            remaining += installment.amount;
+        }
+    });
+    return remaining;
+};
+
+/**
  * Calculate total paid amount
  * @param {Array} paymentSchedule - Array of installment payment schedule
  * @returns {number} Total paid amount
@@ -98,6 +117,25 @@ export const calculatePaidAmount = (paymentSchedule) => {
 
     const paidInstallments = paymentSchedule.filter(installment => installment.status === 'paid');
     return paidInstallments.reduce((total, installment) => total + installment.amount, 0);
+};
+
+/**
+ * Calculate total paid amount (recalculated without relying on status)
+ * @param {Array} paymentSchedule - Array of installment payment schedule
+ * @returns {number} Total paid amount
+ */
+export const calculatePaidAmountRecalculated = (paymentSchedule) => {
+    if (!paymentSchedule || paymentSchedule.length === 0) {
+        return 0;
+    }
+
+    let paid = 0;
+    paymentSchedule.forEach(installment => {
+        if (installment.status === 'paid') {
+            paid += installment.amount;
+        }
+    });
+    return paid;
 };
 
 /**
@@ -120,36 +158,113 @@ export const calculatePaymentProgress = (paymentSchedule) => {
  * Update installment payment schedule after payment
  * @param {Array} paymentSchedule - Current payment schedule
  * @param {number} paymentAmount - Amount paid
- * @returns {Array} Updated payment schedule
+ * @param {number} installmentIndex - Index of the specific installment to pay (optional)
+ * @returns {Object} Updated payment schedule and payment info
  */
-export const updatePaymentSchedule = (paymentSchedule, paymentAmount) => {
+export const updatePaymentSchedule = (paymentSchedule, paymentAmount, installmentIndex = null) => {
     if (!paymentSchedule || paymentAmount <= 0) {
-        return paymentSchedule;
+        return { updatedSchedule: paymentSchedule, paymentInfo: { amountPaid: 0, installmentsPaid: 0, isFullyPaid: false, remainingAmount: paymentAmount } };
     }
 
-    const updatedSchedule = [...paymentSchedule];
-    let remainingAmount = paymentAmount;
+    // Create a deep copy to avoid mutation issues
+    const updatedSchedule = paymentSchedule.map(item => ({ ...item }));
 
-    // Find unpaid installments and apply payment
-    for (let i = 0; i < updatedSchedule.length && remainingAmount > 0; i++) {
-        const installment = updatedSchedule[i];
+    // If a specific installment is targeted
+    if (installmentIndex !== null && installmentIndex >= 0 && installmentIndex < updatedSchedule.length) {
+        const installment = updatedSchedule[installmentIndex];
 
-        if (installment.status !== 'paid') {
-            if (remainingAmount >= installment.amount) {
-                // Full payment for this installment
-                installment.status = 'paid';
-                installment.paidDate = new Date().toISOString().split('T')[0];
-                installment.isPaid = true;
-                remainingAmount -= installment.amount;
-            } else {
-                // Partial payment - for now, we don't handle partial payments
-                // In a real system, you might want to track partial payments
-                break;
-            }
+        if (installment.status !== 'paid' && paymentAmount >= installment.amount) {
+            // Pay the specific installment
+            installment.status = 'paid';
+            installment.paidDate = new Date().toISOString().split('T')[0];
+            installment.isPaid = true;
+
+            const remainingDebt = calculateRemainingDebt(updatedSchedule);
+
+            return {
+                updatedSchedule,
+                paymentInfo: {
+                    amountPaid: installment.amount,
+                    installmentsPaid: 1,
+                    isFullyPaid: remainingDebt === 0,
+                    remainingAmount: paymentAmount - installment.amount
+                }
+            };
+        } else {
+            // Cannot fully pay the specific installment
+            return {
+                updatedSchedule: paymentSchedule, // Return original if cannot pay installment
+                paymentInfo: {
+                    amountPaid: 0,
+                    installmentsPaid: 0,
+                    isFullyPaid: false,
+                    remainingAmount: paymentAmount
+                }
+            };
         }
     }
 
-    return updatedSchedule;
+    // Default behavior: pay in order of due date (earliest first)
+    let remainingAmount = paymentAmount;
+    let installmentsPaidCount = 0;
+    let totalAmountPaid = 0;
+
+    // Get indexes of unpaid installments, sorted by priority
+    const sortedIndexes = updatedSchedule
+        .map((_, index) => index)
+        .filter(index => updatedSchedule[index].status !== 'paid')
+        .sort((a, b) => {
+            // Sort by due date, with overdue payments first
+            const dateA = new Date(updatedSchedule[a].dueDate);
+            const dateB = new Date(updatedSchedule[b].dueDate);
+            const aIsOverdue = dateA < new Date();
+            const bIsOverdue = dateB < new Date();
+
+            // Prioritize overdue payments
+            if (aIsOverdue && !bIsOverdue) return -1;
+            if (!aIsOverdue && bIsOverdue) return 1;
+            // Then sort by due date
+            return dateA - dateB;
+        });
+
+    for (const index of sortedIndexes) {
+        if (remainingAmount <= 0) break;
+
+        const installment = updatedSchedule[index];
+
+        if (installment.status !== 'paid' && remainingAmount >= installment.amount) {
+            // Full payment for this installment
+            installment.status = 'paid';
+            installment.paidDate = new Date().toISOString().split('T')[0];
+            installment.isPaid = true;
+            remainingAmount -= installment.amount;
+            totalAmountPaid += installment.amount;
+            installmentsPaidCount++;
+        } else if (installment.status !== 'paid' && remainingAmount > 0 && remainingAmount < installment.amount) {
+            // Partial payment not allowed - return original schedule
+            return {
+                updatedSchedule: paymentSchedule, // Return original if cannot make a full payment
+                paymentInfo: {
+                    amountPaid: 0,
+                    installmentsPaid: 0,
+                    isFullyPaid: false,
+                    remainingAmount: paymentAmount
+                }
+            };
+        }
+    }
+
+    const remainingDebt = calculateRemainingDebt(updatedSchedule);
+
+    return {
+        updatedSchedule,
+        paymentInfo: {
+            amountPaid: totalAmountPaid,
+            installmentsPaid: installmentsPaidCount,
+            isFullyPaid: remainingDebt === 0,
+            remainingAmount
+        }
+    };
 };
 
 /**
@@ -162,8 +277,16 @@ export const getNextUnpaidInstallment = (paymentSchedule) => {
         return null;
     }
 
-    // Find the first unpaid installment
-    return paymentSchedule.find(installment => installment.status !== 'paid') || null;
+    const today = new Date();
+    // Find the first unpaid installment that is due or has a due date (not in the past if already overdue)
+    const unpaidInstallments = paymentSchedule.filter(installment => installment.status !== 'paid');
+
+    // Prioritize overdue installments first
+    const overdue = unpaidInstallments.find(installment => new Date(installment.dueDate) < today);
+    if (overdue) return overdue;
+
+    // Return the next upcoming unpaid installment
+    return unpaidInstallments[0] || null;
 };
 
 /**
@@ -192,9 +315,9 @@ export const getOverdueInstallments = (paymentSchedule) => {
         return [];
     }
 
+    const today = new Date();
     return paymentSchedule.filter(installment =>
-        installment.status === 'overdue' ||
-        (installment.status !== 'paid' && new Date(installment.dueDate) < new Date())
+        installment.status !== 'paid' && new Date(installment.dueDate) < today
     );
 };
 

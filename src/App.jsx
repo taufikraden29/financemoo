@@ -5,10 +5,10 @@ import { AlertCircle } from "lucide-react";
 // Import components
 import { Header } from './components/layout';
 import { NavigationTabs } from './components/layout';
-import { BalanceCards } from './components/layout';
 import { Notification } from './components/layout';
 import { UserLevelBanner } from './components/layout';
 import { InstallmentManager } from './components/features/installments';
+import BalanceCard from './components/ui/BalanceCard';
 
 // Import tabs
 import {
@@ -176,13 +176,15 @@ const FinanceApp = () => {
 
 
   const handleDeleteBudget = (category) => {
-    if (!window.confirm(`Are you sure you want to delete budget for "${category}"?`)) return;
+    const shouldDelete = window.confirm(`Are you sure you want to delete budget for "${category}"?`);
+    if (!shouldDelete) return;
     deleteBudget(category);
     toast.success(`Budget for ${category} deleted successfully!`);
   };
 
   const handleDeleteRecurring = (recurringId) => {
-    if (!window.confirm("Are you sure you want to delete this recurring transaction? This action cannot be undone.")) return;
+    const shouldDelete = window.confirm("Are you sure you want to delete this recurring transaction? This action cannot be undone.");
+    if (!shouldDelete) return;
     deleteRecurring(recurringId);
     toast.success(`Recurring transaction deleted successfully!`);
   };
@@ -278,10 +280,26 @@ const FinanceApp = () => {
 
   // Enhanced transaction handler with achievement checking
   const handleAddTransaction = (transaction) => {
+    // Validate transaction before adding
+    if (!transaction.amount || transaction.amount <= 0) {
+      toast.error('Amount must be greater than 0');
+      return;
+    }
+
+    if (!transaction.category) {
+      toast.error('Category is required');
+      return;
+    }
+
+    if (!transaction.paymentMethod) {
+      toast.error('Payment method is required');
+      return;
+    }
+
     addTransaction(transaction);
     addXP(5);
     checkAchievement("First Transaction");
-    
+
     // Check for budget achievements
     const budgetCount = Object.keys(budgets).length;
     if (budgetCount >= 5) {
@@ -395,24 +413,14 @@ const FinanceApp = () => {
         {/* User Level Banner */}
         <UserLevelBanner userStats={userStats} />
 
-        {/* Balance Cards */}
-        <BalanceCards
-          totalIncome={totalIncome}
-          totalExpense={totalExpense}
-          balance={balance}
-          formatCurrency={formatCurrency}
-          hideBalance={hideBalance}
-          savingsRate={savingsRate}
-          cashIncome={cashIncome}
-          cashExpense={cashExpense}
-          digitalIncome={digitalIncome}
-          digitalExpense={digitalExpense}
-          cashBalance={cashBalance}
-          digitalBalance={digitalBalance}
-          dailyAverage={dailyAverage}
-          totalDebt={totalDebt}
-          installmentStats={installmentStats}
+        {/* Main Balance Card */}
+        <BalanceCard
+          transactions={transactions}
           bankAccountBalances={bankAccountBalances}
+          hideBalance={hideBalance}
+          setHideBalance={setHideBalance}
+          onAddCash={() => setShowCashAccountModal(true)}
+          onTransfer={() => setShowTransferModal(true)}
         />
 
         {/* Navigation Tabs */}
@@ -482,6 +490,7 @@ const FinanceApp = () => {
         onSubmit={handleAddTransaction}
         transactionType={transactionType}
         setTransactionType={setTransactionType}
+        bankAccounts={bankAccounts}
       />
 
       <BudgetModal
@@ -516,6 +525,7 @@ const FinanceApp = () => {
         onSubmit={handleAddRecurring}
         transactionType={transactionType}
         setTransactionType={setTransactionType}
+        bankAccounts={bankAccounts}
       />
 
       {/* Bank Account Manager Modal */}

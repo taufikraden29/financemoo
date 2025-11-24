@@ -1,14 +1,26 @@
-import React, { useState } from 'react';
-import { Target, AlertTriangle, Plus, Trash2, Edit } from 'lucide-react';
-import { formatCurrency } from '../../utils/formatters/formatters';
-import { CATEGORIES } from '../../constants/categories';
+import React, { useState } from "react";
+import { Target, AlertTriangle, Plus, Trash2, Edit } from "lucide-react";
+import { formatCurrency } from "../../utils/formatters/formatters";
+import { CATEGORIES } from "../../constants/categories";
+import { toast } from "react-hot-toast";
+import { ConfirmModal } from "../ui";
 
-const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenBudgetModal }) => {
+const BudgetTab = ({
+  budgets,
+  transactions,
+  onSetBudget,
+  onDeleteBudget,
+  onOpenBudgetModal,
+}) => {
   const [editingBudget, setEditingBudget] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    category: null,
+  });
 
   const getExpenseByCategory = (category) => {
     return transactions
-      .filter(t => t.type === 'expense' && t.category === category)
+      .filter((t) => t.type === "expense" && t.category === category)
       .reduce((sum, t) => sum + t.amount, 0);
   };
 
@@ -16,15 +28,30 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
     const spent = getExpenseByCategory(category);
     const percentage = (spent / limit) * 100;
     const remaining = limit - spent;
-    
-    if (percentage >= 100) return { status: 'exceeded', color: 'red', percentage, remaining, spent };
-    if (percentage >= 90) return { status: 'danger', color: 'orange', percentage, remaining, spent };
-    if (percentage >= 70) return { status: 'warning', color: 'yellow', percentage, remaining, spent };
-    return { status: 'safe', color: 'green', percentage, remaining, spent };
+
+    if (percentage >= 100)
+      return { status: "exceeded", color: "red", percentage, remaining, spent };
+    if (percentage >= 90)
+      return {
+        status: "danger",
+        color: "orange",
+        percentage,
+        remaining,
+        spent,
+      };
+    if (percentage >= 70)
+      return {
+        status: "warning",
+        color: "yellow",
+        percentage,
+        remaining,
+        spent,
+      };
+    return { status: "safe", color: "green", percentage, remaining, spent };
   };
 
   const getAvailableCategories = () => {
-    return CATEGORIES.expense.filter(cat => !budgets[cat.name]);
+    return CATEGORIES.expense.filter((cat) => !budgets[cat.name]);
   };
 
   const budgetSummary = {
@@ -42,13 +69,25 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
   }));
 
   const handleDeleteBudget = (category) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus budget untuk "${category}"?`)) {
-      onDeleteBudget(category);
+    setDeleteModal({
+      isOpen: true,
+      category,
+    });
+  };
+
+  const confirmDelete = () => {
+    if (deleteModal.category) {
+      onDeleteBudget(deleteModal.category);
+      toast.success("Budget berhasil dihapus!");
+      setDeleteModal({ isOpen: false, category: null });
     }
   };
 
   const handleEditBudget = (category, currentLimit) => {
-    const newLimit = prompt(`Edit budget untuk ${category}:`, currentLimit.toString());
+    const newLimit = prompt(
+      `Edit budget untuk ${category}:`,
+      currentLimit.toString()
+    );
     if (newLimit && !isNaN(newLimit) && parseFloat(newLimit) > 0) {
       onSetBudget(category, parseFloat(newLimit));
     }
@@ -60,7 +99,9 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Manajemen Budget</h2>
-          <p className="text-gray-600">Kelola dan pantau batas pengeluaran per kategori</p>
+          <p className="text-gray-600">
+            Kelola dan pantau batas pengeluaran per kategori
+          </p>
         </div>
         <button
           onClick={onOpenBudgetModal}
@@ -75,31 +116,51 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-blue-100 text-sm font-medium">Total Budget</span>
+            <span className="text-blue-100 text-sm font-medium">
+              Total Budget
+            </span>
             <Target className="w-5 h-5 text-blue-100" />
           </div>
-          <p className="text-2xl font-bold">{formatCurrency(budgetSummary.totalBudget)}</p>
-          <p className="text-blue-100 text-xs">{budgetSummary.categoriesCount} kategori</p>
+          <p className="text-2xl font-bold">
+            {formatCurrency(budgetSummary.totalBudget)}
+          </p>
+          <p className="text-blue-100 text-xs">
+            {budgetSummary.categoriesCount} kategori
+          </p>
         </div>
 
         <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-orange-100 text-sm font-medium">Total Terpakai</span>
+            <span className="text-orange-100 text-sm font-medium">
+              Total Terpakai
+            </span>
             <AlertTriangle className="w-5 h-5 text-orange-100" />
           </div>
-          <p className="text-2xl font-bold">{formatCurrency(budgetSummary.totalSpent)}</p>
+          <p className="text-2xl font-bold">
+            {formatCurrency(budgetSummary.totalSpent)}
+          </p>
           <p className="text-orange-100 text-xs">
-            {budgetSummary.totalBudget > 0 ? ((budgetSummary.totalSpent / budgetSummary.totalBudget) * 100).toFixed(1) : 0}% dari total
+            {budgetSummary.totalBudget > 0
+              ? (
+                  (budgetSummary.totalSpent / budgetSummary.totalBudget) *
+                  100
+                ).toFixed(1)
+              : 0}
+            % dari total
           </p>
         </div>
 
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-green-100 text-sm font-medium">Sisa Budget</span>
+            <span className="text-green-100 text-sm font-medium">
+              Sisa Budget
+            </span>
             <Plus className="w-5 h-5 text-green-100" />
           </div>
           <p className="text-2xl font-bold">
-            {formatCurrency(Math.max(0, budgetSummary.totalBudget - budgetSummary.totalSpent))}
+            {formatCurrency(
+              Math.max(0, budgetSummary.totalBudget - budgetSummary.totalSpent)
+            )}
           </p>
           <p className="text-green-100 text-xs">Tersisa</p>
         </div>
@@ -111,7 +172,9 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
           <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Target className="w-8 h-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Belum Ada Budget</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            Belum Ada Budget
+          </h3>
           <p className="text-gray-600 mb-4">
             Mulai atur budget untuk mengontrol pengeluaran Anda
           </p>
@@ -124,39 +187,58 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Daftar Budget</h3>
-          
+          <h3 className="text-lg font-bold text-gray-900 mb-4">
+            Daftar Budget
+          </h3>
+
           <div className="space-y-4">
             {budgetStats.map((budget) => (
-              <div key={budget.category} className="border border-gray-200 rounded-xl p-4">
+              <div
+                key={budget.category}
+                className="border border-gray-200 rounded-xl p-4"
+              >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg bg-${budget.color}-100`}>
                       <Target className={`w-5 h-5 text-${budget.color}-600`} />
                     </div>
                     <div>
-                      <h4 className="font-bold text-gray-900">{budget.category}</h4>
+                      <h4 className="font-bold text-gray-900">
+                        {budget.category}
+                      </h4>
                       <p className="text-sm text-gray-600">
-                        {formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}
+                        {formatCurrency(budget.spent)} /{" "}
+                        {formatCurrency(budget.limit)}
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      budget.status === 'exceeded' ? 'bg-red-100 text-red-700' :
-                      budget.status === 'danger' ? 'bg-orange-100 text-orange-700' :
-                      budget.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-green-100 text-green-700'
-                    }`}>
-                      {budget.status === 'exceeded' ? 'Melebihi' :
-                       budget.status === 'danger' ? 'Bahaya' :
-                       budget.status === 'warning' ? 'Perhatian' : 'Aman'}
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        budget.status === "exceeded"
+                          ? "bg-red-100 text-red-700"
+                          : budget.status === "danger"
+                          ? "bg-orange-100 text-orange-700"
+                          : budget.status === "warning"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {budget.status === "exceeded"
+                        ? "Melebihi"
+                        : budget.status === "danger"
+                        ? "Bahaya"
+                        : budget.status === "warning"
+                        ? "Perhatian"
+                        : "Aman"}
                     </span>
-                    
+
                     <div className="flex gap-1">
                       <button
-                        onClick={() => handleEditBudget(budget.category, budget.limit)}
+                        onClick={() =>
+                          handleEditBudget(budget.category, budget.limit)
+                        }
                         className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
                         title="Edit Budget"
                       >
@@ -179,19 +261,27 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
                     <span className="text-sm text-gray-600">
                       {budget.percentage.toFixed(1)}% terpakai
                     </span>
-                    <span className={`text-sm font-medium ${
-                      budget.remaining >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {budget.remaining >= 0 ? 'Sisa:' : 'Kelebihan:'} {formatCurrency(Math.abs(budget.remaining))}
+                    <span
+                      className={`text-sm font-medium ${
+                        budget.remaining >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {budget.remaining >= 0 ? "Sisa:" : "Kelebihan:"}{" "}
+                      {formatCurrency(Math.abs(budget.remaining))}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
                       className={`h-3 rounded-full transition-all ${
-                        budget.status === 'exceeded' ? 'bg-red-500' :
-                        budget.status === 'danger' ? 'bg-orange-500' :
-                        budget.status === 'warning' ? 'bg-yellow-500' :
-                        'bg-green-500'
+                        budget.status === "exceeded"
+                          ? "bg-red-500"
+                          : budget.status === "danger"
+                          ? "bg-orange-500"
+                          : budget.status === "warning"
+                          ? "bg-yellow-500"
+                          : "bg-green-500"
                       }`}
                       style={{ width: `${Math.min(budget.percentage, 100)}%` }}
                     />
@@ -199,13 +289,15 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
                 </div>
 
                 {/* Alert Messages */}
-                {budget.status === 'exceeded' && (
+                {budget.status === "exceeded" && (
                   <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
                     <AlertTriangle className="w-4 h-4" />
-                    <span>Budget telah terlampaui! Segera tinjau pengeluaran Anda.</span>
+                    <span>
+                      Budget telah terlampaui! Segera tinjau pengeluaran Anda.
+                    </span>
                   </div>
                 )}
-                {budget.status === 'danger' && (
+                {budget.status === "danger" && (
                   <div className="flex items-center gap-2 mt-2 text-orange-600 text-sm">
                     <AlertTriangle className="w-4 h-4" />
                     <span> Hampir mencapai batas budget!</span>
@@ -220,7 +312,9 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
       {/* Available Categories */}
       {getAvailableCategories().length > 0 && (
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Kategori Tersedia</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">
+            Kategori Tersedia
+          </h3>
           <p className="text-gray-600 mb-4">
             Kategori berikut belum memiliki budget:
           </p>
@@ -242,6 +336,17 @@ const BudgetTab = ({ budgets, transactions, onSetBudget, onDeleteBudget, onOpenB
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, category: null })}
+        onConfirm={confirmDelete}
+        title="Hapus Budget"
+        message={`Apakah Anda yakin ingin menghapus budget untuk "${deleteModal.category}"?`}
+        confirmText="Hapus"
+        type="danger"
+      />
     </div>
   );
 };

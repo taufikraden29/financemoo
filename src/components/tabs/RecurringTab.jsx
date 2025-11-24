@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { Repeat, Plus, Trash2, ToggleLeft, ToggleRight, Calendar, Clock } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters/formatters';
 import { getIconComponent } from '../../utils/helpers/iconMapper';
+import { toast } from 'react-hot-toast';
+import { ConfirmModal } from '../ui';
 
 const RecurringTab = ({ recurringTransactions, onAddRecurring, onDeleteRecurring, onOpenRecurringModal, setTransactionType }) => {
   const [filterStatus, setFilterStatus] = useState('all');
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, recurringId: null, recurring: null });
 
   const filteredTransactions = recurringTransactions.filter(r => {
     if (filterStatus === 'all') return true;
@@ -75,11 +78,24 @@ const RecurringTab = ({ recurringTransactions, onAddRecurring, onDeleteRecurring
 
   const handleToggleStatus = (recurring) => {
     // TODO: Implement toggle functionality in the hook
-    alert(`Fitur toggle status untuk ${recurring.description} akan segera hadir!`);
+    toast(`Fitur toggle status untuk ${recurring.description} akan segera hadir!`);
   };
 
   const handleDelete = (recurringId) => {
-    onDeleteRecurring(recurringId);
+    const recurring = recurringTransactions.find(r => r.id === recurringId);
+    setDeleteModal({
+      isOpen: true,
+      recurringId,
+      recurring
+    });
+  };
+
+  const confirmDelete = () => {
+    if (deleteModal.recurringId) {
+      onDeleteRecurring(deleteModal.recurringId);
+      toast.success('Transaksi berulang berhasil dihapus!');
+      setDeleteModal({ isOpen: false, recurringId: null, recurring: null });
+    }
   };
 
   return (
@@ -308,6 +324,17 @@ const RecurringTab = ({ recurringTransactions, onAddRecurring, onDeleteRecurring
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, recurringId: null, recurring: null })}
+        onConfirm={confirmDelete}
+        title="Hapus Transaksi Berulang"
+        message={`Apakah Anda yakin ingin menghapus transaksi berulang "${deleteModal.recurring?.description || deleteModal.recurring?.category || 'ini'}" sejumlah ${deleteModal.recurring ? formatCurrency(deleteModal.recurring.amount) : ''}?`}
+        confirmText="Hapus"
+        type="danger"
+      />
     </div>
   );
 };

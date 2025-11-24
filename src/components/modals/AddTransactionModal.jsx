@@ -5,7 +5,7 @@ import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../../u
 import { validateTransaction } from '../../utils/validation/validators';
 import { toast } from 'react-hot-toast';
 
-const AddTransactionModal = ({ isOpen, onClose, onSubmit, transactionType, setTransactionType }) => {
+const AddTransactionModal = ({ isOpen, onClose, onSubmit, transactionType, setTransactionType, bankAccounts = [] }) => {
   const [formData, setFormData] = useState({
     amount: '',
     category: '',
@@ -61,7 +61,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSubmit, transactionType, setTr
   const categories = transactionType === 'income' ? CATEGORIES.income : CATEGORIES.expense;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
@@ -109,31 +109,28 @@ const AddTransactionModal = ({ isOpen, onClose, onSubmit, transactionType, setTr
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Jumlah {transactionType === 'income' ? 'Pemasukan' : 'Pengeluaran'}
             </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
-              <input
-                type="text"
-                value={formData.amount ? formatCurrencyInput(formData.amount) : ''}
-                onChange={(e) => {
-                  const numericValue = parseCurrencyInput(e.target.value);
-                  setFormData({ ...formData, amount: numericValue });
-                }}
-                onFocus={(e) => {
-                  const numericValue = parseCurrencyInput(e.target.value);
-                  if (numericValue) {
-                    e.target.value = numericValue.toString();
-                  }
-                }}
-                onBlur={(e) => {
-                  if (e.target.value) {
-                    e.target.value = formatCurrencyInput(e.target.value);
-                  }
-                }}
-                className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="0"
-                required
-              />
-            </div>
+            <input
+              type="text"
+              value={formData.amount ? formatCurrencyInput(formData.amount) : ''}
+              onChange={(e) => {
+                const numericValue = parseCurrencyInput(e.target.value);
+                setFormData({ ...formData, amount: numericValue });
+              }}
+              onFocus={(e) => {
+                const numericValue = parseCurrencyInput(e.target.value);
+                if (numericValue) {
+                  e.target.value = numericValue.toString();
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value) {
+                  e.target.value = formatCurrencyInput(e.target.value);
+                }
+              }}
+              className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="0"
+              required
+            />
           </div>
 
           {/* Category */}
@@ -169,30 +166,19 @@ const AddTransactionModal = ({ isOpen, onClose, onSubmit, transactionType, setTr
           {/* Payment Method */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Metode Pembayaran</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, paymentMethod: 'cash' })}
-                className={`py-2 px-4 rounded-xl font-medium transition-all ${
-                  formData.paymentMethod === 'cash'
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Tunai
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, paymentMethod: 'digital' })}
-                className={`py-2 px-4 rounded-xl font-medium transition-all ${
-                  formData.paymentMethod === 'digital'
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Digital
-              </button>
-            </div>
+            <select
+              value={formData.paymentMethod}
+              onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+              className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="cash">Tunai</option>
+              <option value="digital">Digital</option>
+              {bankAccounts && bankAccounts.map(account => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Date */}

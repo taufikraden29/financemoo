@@ -6,7 +6,9 @@ import {
     getInstallmentSummary,
     calculateRemainingDebt,
     calculatePaidAmount,
-    calculateInstallmentAmount
+    calculateInstallmentAmount,
+    calculateRemainingDebtRecalculated,
+    calculatePaidAmountRecalculated
 } from '../../utils/calculations';
 
 export const useInstallments = () => {
@@ -61,7 +63,7 @@ export const useInstallments = () => {
 
         setInstallments(prev => prev.map(installment => {
             if (installment.id === installmentId) {
-                const updatedSchedule = updatePaymentSchedule(
+                const { updatedSchedule, paymentInfo: updatePaymentInfo } = updatePaymentSchedule(
                     installment.paymentSchedule,
                     paymentAmount
                 );
@@ -77,10 +79,10 @@ export const useInstallments = () => {
                 };
 
                 paymentInfo = {
-                    amountPaid: Math.min(paymentAmount, installment.totalAmount - paidAmount),
-                    installmentsPaid: summary.paidInstallments - installment.paymentSchedule.filter(p => p.status === 'paid').length,
-                    isFullyPaid: remainingAmount === 0,
-                    remainingAmount
+                    amountPaid: updatePaymentInfo.amountPaid,
+                    installmentsPaid: updatePaymentInfo.installmentsPaid,
+                    isFullyPaid: updatePaymentInfo.isFullyPaid,
+                    remainingAmount: updatePaymentInfo.remainingAmount
                 };
 
                 return updatedInstallment;
@@ -115,10 +117,23 @@ export const useInstallments = () => {
      * @returns {Array} Array of installments with summary data
      */
     const getInstallmentsWithSummary = useCallback(() => {
-        return installments.map(installment => ({
-            ...installment,
-            summary: getInstallmentSummary(installment.paymentSchedule)
-        }));
+        return installments.map(installment => {
+            const summary = getInstallmentSummary(installment.paymentSchedule);
+            const paidAmount = calculatePaidAmountRecalculated(installment.paymentSchedule);
+            const remainingAmount = calculateRemainingDebtRecalculated(installment.paymentSchedule);
+            
+            return {
+                ...installment,
+                summary: {
+                    ...summary,
+                    totalAmount: installment.totalAmount,
+                    paidAmount,
+                    remainingAmount,
+                    progressPercentage: installment.totalAmount > 0 ?
+                        Math.round((paidAmount / installment.totalAmount) * 100) : 0
+                }
+            };
+        });
     }, [installments]);
 
     /**
@@ -127,11 +142,11 @@ export const useInstallments = () => {
      */
     const getTotalStatistics = useCallback(() => {
         const totalDebt = installments.reduce((sum, installment) => {
-            return sum + calculateRemainingDebt(installment.paymentSchedule);
+            return sum + calculateRemainingDebtRecalculated(installment.paymentSchedule);
         }, 0);
 
         const totalPaid = installments.reduce((sum, installment) => {
-            return sum + calculatePaidAmount(installment.paymentSchedule);
+            return sum + calculatePaidAmountRecalculated(installment.paymentSchedule);
         }, 0);
 
         const totalAmount = installments.reduce((sum, installment) => {

@@ -3,7 +3,7 @@ import { X, Repeat, Calendar } from 'lucide-react';
 import { CATEGORIES, FREQUENCY_OPTIONS } from '../../constants/categories';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../../utils/formatters/formatters';
 
-const AddRecurringModal = ({ isOpen, onClose, onSubmit, transactionType, setTransactionType }) => {
+const AddRecurringModal = ({ isOpen, onClose, onSubmit, transactionType, setTransactionType, bankAccounts = [] }) => {
   const [formData, setFormData] = useState({
     amount: '',
     category: '',
@@ -51,7 +51,7 @@ const AddRecurringModal = ({ isOpen, onClose, onSubmit, transactionType, setTran
   const categories = transactionType === 'income' ? CATEGORIES.income : CATEGORIES.expense;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
@@ -210,30 +210,19 @@ const AddRecurringModal = ({ isOpen, onClose, onSubmit, transactionType, setTran
           {/* Payment Method */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Metode Pembayaran</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, paymentMethod: 'cash' })}
-                className={`py-2 px-4 rounded-xl font-medium transition-all ${
-                  formData.paymentMethod === 'cash'
-                    ? 'bg-purple-500 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Tunai
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, paymentMethod: 'digital' })}
-                className={`py-2 px-4 rounded-xl font-medium transition-all ${
-                  formData.paymentMethod === 'digital'
-                    ? 'bg-purple-500 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Digital
-              </button>
-            </div>
+            <select
+              value={formData.paymentMethod}
+              onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+              className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            >
+              <option value="cash">Tunai</option>
+              <option value="digital">Digital</option>
+              {bankAccounts && bankAccounts.map(account => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Preview */}
