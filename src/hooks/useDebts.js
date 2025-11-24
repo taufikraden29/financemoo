@@ -25,6 +25,10 @@ export const useDebts = () => {
     return isFullyPaid;
   };
 
+  const deleteDebt = (debtId) => {
+    setDebts(debts.filter(debt => debt.id !== debtId));
+  };
+
   const totalDebt = debts.reduce(
     (sum, debt) => sum + (debt.totalAmount - debt.paidAmount), 
     0
@@ -38,5 +42,6 @@ export const useDebts = () => {
     totalDebtPaid,
     addDebt,
     payDebt,
+    deleteDebt,
   };
 };

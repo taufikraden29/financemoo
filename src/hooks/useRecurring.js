@@ -16,9 +16,16 @@ export const useRecurring = () => {
     );
   };
 
+  const deleteRecurring = (id) => {
+    setRecurringTransactions(
+      recurringTransactions.filter(rt => rt.id !== id)
+    );
+  };
+
   return {
     recurringTransactions,
     addRecurring,
     toggleRecurring,
+    deleteRecurring,
   };
 };

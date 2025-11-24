@@ -9,6 +9,23 @@ export const useTransactions = () => {
     setTransactions([newTransaction, ...transactions]);
   };
 
+  const deleteTransaction = (transactionId) => {
+    const transaction = transactions.find(t => t.id === transactionId);
+    
+    // If it's an expense, reduce the budget spent
+    if (transaction && transaction.type === "expense" && budgets[transaction.category]) {
+      setBudgets({
+        ...budgets,
+        [transaction.category]: {
+          ...budgets[transaction.category],
+          spent: Math.max(0, budgets[transaction.category].spent - transaction.amount),
+        },
+      });
+    }
+    
+    setTransactions(transactions.filter(t => t.id !== transactionId));
+  };
+
   const updateBudgetSpent = (category, amount) => {
     if (budgets[category]) {
       setBudgets({
@@ -29,6 +46,11 @@ export const useTransactions = () => {
         spent: budgets[category]?.spent || 0,
       },
     });
+  };
+
+  const deleteBudget = (category) => {
+    const { [category]: removed, ...rest } = budgets;
+    setBudgets(rest);
   };
 
   const totalIncome = transactions
@@ -61,7 +83,9 @@ export const useTransactions = () => {
     expenseByCategory,
     topExpenses,
     addTransaction,
+    deleteTransaction,
     updateBudgetSpent,
     setBudget,
+    deleteBudget,
   };
 };
