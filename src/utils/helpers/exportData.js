@@ -1,6 +1,11 @@
-export const exportToJSON = (data) => {
+const exportData = (transactions, budgets, recurringTransactions, savingsGoal, userStats, achievements) => {
   const exportData = {
-    ...data,
+    transactions,
+    budgets,
+    recurringTransactions,
+    savingsGoal,
+    userStats,
+    achievements,
     exportDate: new Date().toISOString(),
   };
 
@@ -13,3 +18,5 @@ export const exportToJSON = (data) => {
   link.click();
   URL.revokeObjectURL(url);
 };
+
+export default exportData;
