@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, CreditCard, Building, User, Hash, Eye, EyeOff } from 'lucide-react';
 import { useLocalStorage } from '../../utils/helpers';
-import { formatCurrency } from '../../utils/formatters/formatters';
+import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../../utils/formatters/formatters';
 import { toast } from 'react-hot-toast';
 
 const BankAccountManager = ({ isOpen, onClose, bankAccounts, setBankAccounts }) => {
@@ -144,13 +144,27 @@ const BankAccountManager = ({ isOpen, onClose, bankAccounts, setBankAccounts }) 
 
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Saldo Awal (Opsional)</label>
-                <input
-                  type="text"
-                  value={formData.initialBalance}
-                  onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  placeholder="0"
-                />
+                  <input
+                    type="text"
+                    value={formData.initialBalance ? formatCurrencyInput(formData.initialBalance) : ''}
+                    onChange={(e) => {
+                      const numericValue = parseCurrencyInput(e.target.value);
+                      setFormData({ ...formData, initialBalance: numericValue });
+                    }}
+                    onFocus={(e) => {
+                      const numericValue = parseCurrencyInput(e.target.value);
+                      if (numericValue) {
+                        e.target.value = numericValue.toString();
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value) {
+                        e.target.value = formatCurrencyInput(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-30 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="0"
+                  />
               </div>
 
               <button

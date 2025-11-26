@@ -1,9 +1,9 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertTriangle, Wallet, CreditCard, PiggyBank } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters/formatters';
 import { getIconComponent } from '../../utils/helpers/iconMapper';
 
-const OverviewTab = ({ transactions, budgets, recurringTransactions, balance, totalIncome, totalExpense }) => {
+const OverviewTab = ({ transactions, budgets, recurringTransactions, balance, totalIncome, totalExpense, cashBalance, digitalBalance, bankAccountBalances = [] }) => {
   // Get recent transactions (last 5)
   const recentTransactions = transactions.slice(0, 5);
 
@@ -112,6 +112,65 @@ const OverviewTab = ({ transactions, budgets, recurringTransactions, balance, to
           <p className="text-2xl font-bold">{Object.keys(budgets).length}</p>
           <p className="text-purple-100 text-xs">Kategori</p>
         </div>
+      </div>
+
+      {/* Account Balance Cards Section */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Wallet className="w-5 h-5 text-indigo-600" />
+          Saldo Akun
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Cash Balance Card */}
+          <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-4 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-amber-100 text-sm font-medium">Tunai</span>
+              <PiggyBank className="w-5 h-5 text-amber-200" />
+            </div>
+            <p className="text-xl font-bold">{formatCurrency(cashBalance)}</p>
+            <p className="text-amber-200 text-xs">Saldo saat ini</p>
+          </div>
+
+          {/* Digital Balance Card */}
+          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-4 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-blue-100 text-sm font-medium">Digital</span>
+              <CreditCard className="w-5 h-5 text-blue-200" />
+            </div>
+            <p className="text-xl font-bold">{formatCurrency(digitalBalance)}</p>
+            <p className="text-blue-200 text-xs">Total rekening digital</p>
+          </div>
+
+          {/* Bank Accounts Summary */}
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-emerald-100 text-sm font-medium">Bank</span>
+              <CreditCard className="w-5 h-5 text-emerald-200" />
+            </div>
+            <p className="text-xl font-bold">{formatCurrency(bankAccountBalances.reduce((sum, acc) => sum + acc.balance, 0))}</p>
+            <p className="text-emerald-200 text-xs">{bankAccountBalances.length} rekening</p>
+          </div>
+        </div>
+
+        {/* Individual Bank Accounts */}
+        {bankAccountBalances.length > 0 && (
+          <div className="mt-4 space-y-3">
+            <h4 className="font-medium text-gray-700">Detail Rekening Bank</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {bankAccountBalances.map((account) => (
+                <div key={account.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{account.name}</p>
+                      <p className="text-xs text-gray-600">{account.bankName}</p>
+                    </div>
+                    <p className="font-bold text-gray-900">{formatCurrency(account.balance)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

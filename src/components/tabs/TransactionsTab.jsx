@@ -143,6 +143,13 @@ const TransactionsTab = ({
     return Array.from(categories);
   };
 
+  const getPaymentMethodLabel = (transaction) => {
+    if (transaction.isTransfer) {
+      return "Transfer";
+    }
+    return transaction.paymentMethod === "cash" ? "Tunai" : "Digital";
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -373,9 +380,7 @@ const TransactionsTab = ({
                               : "Pengeluaran"}
                           </span>
                           <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-700">
-                            {transaction.paymentMethod === "cash"
-                              ? "Tunai"
-                              : "Digital"}
+                            {getPaymentMethodLabel(transaction)}
                           </span>
                         </div>
                         {transaction.description && (

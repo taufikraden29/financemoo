@@ -1736,7 +1736,7 @@ const FinanceApp = () => {
       )}
     </div >
 
-      {/* Add Transaction Modal */ }
+  {/* Add Transaction Modal */ }
   {
     showAddModal && (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
@@ -1768,7 +1768,7 @@ const FinanceApp = () => {
           <div className="flex space-x-2 mb-4 md:mb-6 bg-gray-100 rounded-xl p-1">
             <button
               onClick={() => setTransactionType("expense")}
-              className={`flex-1 py-2.5 md:py-3 px-3 md:px-4 rounded-lg font-medium text-sm md:text-base transition-all duration-200 ${transactionType === "expense"
+              className={`flex-1 py-2.5 md:py-3 px-3 md:px-4 rounded-lg font-medium text-sm md:text-base transition-all duration-20 ${transactionType === "expense"
                 ? "bg-white text-red-600 shadow-md"
                 : "text-gray-600"
                 }`}
@@ -1797,14 +1797,21 @@ const FinanceApp = () => {
                 </span>
                 <input
                   type="text"
-                  value={formData.amount ? new Intl.NumberFormat("id-ID", {
-                    style: "decimal",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(formData.amount) : ""}
+                  value={formData.amount ? formatCurrencyInput(formData.amount) : ''}
                   onChange={(e) => {
-                    const numericValue = e.target.value.replace(/[^\d]/g, '');
+                    const numericValue = parseCurrencyInput(e.target.value);
                     setFormData({ ...formData, amount: numericValue });
+                  }}
+                  onFocus={(e) => {
+                    const numericValue = parseCurrencyInput(e.target.value);
+                    if (numericValue) {
+                      e.target.value = numericValue.toString();
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value) {
+                      e.target.value = formatCurrencyInput(e.target.value);
+                    }
                   }}
                   className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
                   placeholder="0"
@@ -1827,7 +1834,7 @@ const FinanceApp = () => {
                       }
                       className={`p-2.5 md:p-3 rounded-xl border-2 transition-all duration-200 active:scale-95 ${formData.category === cat.name
                         ? "border-indigo-500 bg-indigo-50"
-                        : "border-gray-200 hover:border-gray-300 active:bg-gray-50"
+                        : "border-gray-20 hover:border-gray-300 active:bg-gray-50"
                         }`}
                     >
                       <Icon
@@ -1855,7 +1862,7 @@ const FinanceApp = () => {
                   type="button"
                   onClick={() => setPaymentMethod("cash")}
                   className={`flex-1 py-2.5 px-3 rounded-xl font-medium text-sm transition-all duration-200 ${paymentMethod === "cash"
-                    ? "bg-green-100 text-green-700 border-2 border-green-500"
+                    ? "bg-green-10 text-green-700 border-2 border-green-500"
                     : "bg-gray-100 text-gray-700 border-2 border-gray-200"
                     }`}
                 >
@@ -1927,14 +1934,13 @@ const FinanceApp = () => {
 
             <button
               onClick={handleAddTransaction}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 md:py-4 rounded-xl font-bold hover:shadow-xl transition-all duration-200 active:scale-95 md:hover:scale-105 mt-4 md:mt-6 text-sm md:text-base"
+              className="w-full bg-gradient-to-r from-indigo-60 to-purple-600 text-white py-3 md:py-4 rounded-xl font-bold hover:shadow-xl transition-all duration-200 active:scale-95 md:hover:scale-105 mt-4 md:mt-6 text-sm md:text-base"
             >
               Simpan Transaksi
             </button>
           </div>
         </div>
-      </div>
-    )
+      </div>)
   }
 
   {/* Budget Modal */ }
@@ -1997,14 +2003,21 @@ const FinanceApp = () => {
                 </span>
                 <input
                   type="text"
-                  value={budgetForm.limit ? new Intl.NumberFormat("id-ID", {
-                    style: "decimal",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(budgetForm.limit) : ""}
+                  value={budgetForm.limit ? formatCurrencyInput(budgetForm.limit) : ''}
                   onChange={(e) => {
-                    const numericValue = e.target.value.replace(/[^\d]/g, '');
+                    const numericValue = parseCurrencyInput(e.target.value);
                     setBudgetForm({ ...budgetForm, limit: numericValue });
+                  }}
+                  onFocus={(e) => {
+                    const numericValue = parseCurrencyInput(e.target.value);
+                    if (numericValue) {
+                      e.target.value = numericValue.toString();
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value) {
+                      e.target.value = formatCurrencyInput(e.target.value);
+                    }
                   }}
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   placeholder="0"
@@ -2020,8 +2033,7 @@ const FinanceApp = () => {
             </button>
           </div>
         </div>
-      </div>
-    )
+      </div>)
   }
 
   {/* Recurring Transaction Modal */ }
@@ -2035,7 +2047,7 @@ const FinanceApp = () => {
             </h3>
             <button
               onClick={() => setShowRecurringModal(false)}
-              className="text-gray-400 hover:text-gray-600 active:text-gray-800 transition-colors p-1"
+              className="text-gray-400 hover:text-gray-60 active:text-gray-800 transition-colors p-1"
             >
               <svg
                 className="w-6 h-6"
@@ -2053,7 +2065,7 @@ const FinanceApp = () => {
             </button>
           </div>
 
-          <div className="flex space-x-2 mb-4 md:mb-6 bg-gray-100 rounded-xl p-1">
+          <div className="flex space-x-2 mb-4 md:mb-6 bg-gray-10 rounded-xl p-1">
             <button
               onClick={() => setTransactionType("expense")}
               className={`flex-1 py-2.5 md:py-3 px-3 md:px-4 rounded-lg font-medium text-sm md:text-base transition-all duration-200 ${transactionType === "expense"
@@ -2085,14 +2097,21 @@ const FinanceApp = () => {
                 </span>
                 <input
                   type="text"
-                  value={recurringForm.amount ? new Intl.NumberFormat("id-ID", {
-                    style: "decimal",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(recurringForm.amount) : ""}
+                  value={recurringForm.amount ? formatCurrencyInput(recurringForm.amount) : ''}
                   onChange={(e) => {
-                    const numericValue = e.target.value.replace(/[^\d]/g, '');
+                    const numericValue = parseCurrencyInput(e.target.value);
                     setRecurringForm({ ...recurringForm, amount: numericValue });
+                  }}
+                  onFocus={(e) => {
+                    const numericValue = parseCurrencyInput(e.target.value);
+                    if (numericValue) {
+                      e.target.value = numericValue.toString();
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value) {
+                      e.target.value = formatCurrencyInput(e.target.value);
+                    }
                   }}
                   className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
                   placeholder="0"
@@ -2226,8 +2245,7 @@ const FinanceApp = () => {
             </button>
           </div>
         </div>
-      </div>
-    )
+      </div>)
   }
 
   {/* Add Cash Account Modal */ }
@@ -2285,14 +2303,21 @@ const FinanceApp = () => {
                 </span>
                 <input
                   type="text"
-                  value={cashAccountForm.initialBalance ? new Intl.NumberFormat("id-ID", {
-                    style: "decimal",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(cashAccountForm.initialBalance) : ""}
+                  value={cashAccountForm.initialBalance ? formatCurrencyInput(cashAccountForm.initialBalance) : ''}
                   onChange={(e) => {
-                    const numericValue = e.target.value.replace(/[^\d]/g, '');
+                    const numericValue = parseCurrencyInput(e.target.value);
                     setCashAccountForm({ ...cashAccountForm, initialBalance: numericValue });
+                  }}
+                  onFocus={(e) => {
+                    const numericValue = parseCurrencyInput(e.target.value);
+                    if (numericValue) {
+                      e.target.value = numericValue.toString();
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value) {
+                      e.target.value = formatCurrencyInput(e.target.value);
+                    }
                   }}
                   className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-base"
                   placeholder="0"
@@ -2308,8 +2333,7 @@ const FinanceApp = () => {
             </button>
           </div>
         </div>
-      </div>
-    )
+      </div>)
   }
 
   {/* Cash Transfer Modal */ }
@@ -2394,14 +2418,21 @@ const FinanceApp = () => {
                 </span>
                 <input
                   type="text"
-                  value={transferForm.amount ? new Intl.NumberFormat("id-ID", {
-                    style: "decimal",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(transferForm.amount) : ""}
+                  value={transferForm.amount ? formatCurrencyInput(transferForm.amount) : ''}
                   onChange={(e) => {
-                    const numericValue = e.target.value.replace(/[^\d]/g, '');
+                    const numericValue = parseCurrencyInput(e.target.value);
                     setTransferForm({ ...transferForm, amount: numericValue });
+                  }}
+                  onFocus={(e) => {
+                    const numericValue = parseCurrencyInput(e.target.value);
+                    if (numericValue) {
+                      e.target.value = numericValue.toString();
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value) {
+                      e.target.value = formatCurrencyInput(e.target.value);
+                    }
                   }}
                   className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   placeholder="0"
@@ -2432,10 +2463,10 @@ const FinanceApp = () => {
             </button>
           </div>
         </div>
-      </div>
-    )
+      </div>)
   }
     </div >
+  </>
   <Toaster
     position="top-right"
     toastOptions={{
@@ -2473,3 +2504,9 @@ const FinanceApp = () => {
           success: {
             style: {
               background: '#d1fae5', // light green
+            }
+          }
+        }
+      }
+    }}
+  />

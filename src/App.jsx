@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { AlertCircle } from "lucide-react";
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Import components
 import { Header } from './components/layout';
@@ -9,6 +10,7 @@ import { Notification } from './components/layout';
 import { UserLevelBanner } from './components/layout';
 import { InstallmentManager } from './components/features/installments';
 import BalanceCard from './components/ui/BalanceCard';
+import { LoginForm, RegisterForm } from './components/auth';
 
 // Import tabs
 import {
@@ -39,24 +41,18 @@ import { formatCurrency } from './utils/formatters';
 import { getIconComponent, useLocalStorage } from './utils/helpers';
 
 /**
- * Main Finance Application Component
- * Manages the core state and business logic for the MoneyPro application
- * Handles transactions, budgets, recurring transactions, achievements, installments, and gamification
- * @returns {JSX.Element} The main application UI
+ * Main Finance Application Component with Authentication
+ * Manages authentication state and wraps the main app with auth context
  */
 
-const FinanceApp = () => {
-  // Custom hooks
+const FinanceAppContent = () => {
+  const { user, userProfile, loading, signOut } = useAuth();
+
+  // Authentication state
+  const [authMode, setAuthMode] = useState('login'); // 'login', 'register'
+
+  // Custom hooks (only when authenticated)
   const [hideBalance, setHideBalance] = useLocalStorage("hideBalance", false);
-
-  const [activeTab, setActiveTab] = useState("overview");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showBudgetModal, setShowBudgetModal] = useState(false);
-  const [showCashAccountModal, setShowCashAccountModal] = useState(false);
-  const [showTransferModal, setShowTransferModal] = useState(false);
-  const [showBankAccountManager, setShowBankAccountManager] = useState(false);
-
-  // Use business hooks
   const { transactions, addTransaction, deleteTransaction, updateTransaction, setTransactions } = useTransactions();
   const { budgets, setBudget, deleteBudget, setBudgets } = useBudgets();
   const { recurringTransactions, addRecurring, deleteRecurring, setRecurringTransactions } = useRecurring();
@@ -64,47 +60,83 @@ const FinanceApp = () => {
   const { installments, addInstallment, makePayment, getTotalStatistics, setInstallments } = useInstallments();
   const { userStats, addXP, setUserStats } = useGamification();
 
-  // Bank accounts state
-  const [bankAccounts, setBankAccounts] = useLocalStorage("bankAccounts", [
-    { id: "default", name: "Rekening Digital", bankName: "Digital Wallet", accountName: "Pribadi", accountNumber: "****" }
-  ]);
-
   // UI state
+  const [activeTab, setActiveTab] = useState("overview");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [showCashAccountModal, setShowCashAccountModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showBankAccountManager, setShowBankAccountManager] = useState(false);
   const [transactionType, setTransactionType] = useState("expense");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [showNotification, setShowNotification] = useState(false);
   const [showAchievementNotification, setShowAchievementNotification] = useState(null);
 
-  // Calculate derived values
+  // Bank accounts state
+  const [bankAccounts, setBankAccounts] = useLocalStorage("bankAccounts", [
+    { id: "default", name: "Rekening Digital", bankName: "Digital Wallet", accountName: "Pribadi", accountNumber: "****" }
+  ]);
+
+  // Show loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Memuat aplikasi...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication forms if not logged in
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {authMode === 'login' ? (
+            <LoginForm 
+              onSwitchToRegister={() => setAuthMode('register')}
+              onSwitchToReset={() => toast.info('Fitur reset password akan segera hadir')}
+            />
+          ) : (
+            <RegisterForm onSwitchToLogin={() => setAuthMode('login')} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate derived values (only when authenticated)
   const totalIncome = transactions
-    .filter((t) => t.type === "income")
+    .filter((t) => t.type === "income" && !t.isTransfer)
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalExpense = transactions
-    .filter((t) => t.type === "expense")
+    .filter((t) => t.type === "expense" && !t.isTransfer)
     .reduce((sum, t) => sum + t.amount, 0);
 
   // Calculate cash and digital transaction totals
   const cashIncome = transactions
-    .filter((t) => t.type === "income" && t.paymentMethod === "cash")
+    .filter((t) => t.type === "income" && t.paymentMethod === "cash" && !t.isTransfer)
     .reduce((sum, t) => sum + t.amount, 0);
 
   const cashExpense = transactions
-    .filter((t) => t.type === "expense" && t.paymentMethod === "cash")
+    .filter((t) => t.type === "expense" && t.paymentMethod === "cash" && !t.isTransfer)
     .reduce((sum, t) => sum + t.amount, 0);
 
   // Calculate digital income and expense from all bank accounts
   const digitalIncome = transactions
-    .filter((t) => t.type === "income" && (
+    .filter((t) => t.type === "income" && !t.isTransfer && (
       t.paymentMethod === "digital" ||
-      bankAccounts.some(acc => acc.id === t.paymentMethod) // matches any bank account ID
+      bankAccounts.some(acc => acc.id === t.paymentMethod)
     ))
     .reduce((sum, t) => sum + t.amount, 0);
 
   const digitalExpense = transactions
-    .filter((t) => t.type === "expense" && (
+    .filter((t) => t.type === "expense" && !t.isTransfer && (
       t.paymentMethod === "digital" ||
-      bankAccounts.some(acc => acc.id === t.paymentMethod) // matches any bank account ID
+      bankAccounts.some(acc => acc.id === t.paymentMethod)
     ))
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -114,11 +146,11 @@ const FinanceApp = () => {
   // Calculate bank account balances if available
   const bankAccountBalances = bankAccounts.map(account => {
     const accountIncome = transactions
-      .filter((t) => t.type === "income" && t.paymentMethod === account.id)
+      .filter((t) => t.type === "income" && t.paymentMethod === account.id && !t.isTransfer)
       .reduce((sum, t) => sum + t.amount, 0);
 
     const accountExpense = transactions
-      .filter((t) => t.type === "expense" && t.paymentMethod === account.id)
+      .filter((t) => t.type === "expense" && t.paymentMethod === account.id && !t.isTransfer)
       .reduce((sum, t) => sum + t.amount, 0);
 
     return {
@@ -131,7 +163,7 @@ const FinanceApp = () => {
 
   // Calculate digital balance based on all bank accounts
   const totalBankBalance = bankAccountBalances.reduce((sum, acc) => sum + acc.balance, 0);
-  const digitalBalance = totalBankBalance; // Now digitalBalance is sum of all bank account balances
+  const digitalBalance = totalBankBalance;
 
   // Get installment statistics
   const installmentStats = getTotalStatistics();
@@ -159,7 +191,6 @@ const FinanceApp = () => {
   const handleImportData = async (file) => {
     try {
       await importData(file, (data) => {
-        // Set all the imported data
         setTransactions(data.transactions);
         setBudgets(data.budgets);
         setRecurringTransactions(data.recurringTransactions);
@@ -168,12 +199,11 @@ const FinanceApp = () => {
         setAchievements(data.achievements);
       });
       toast.success('Data imported successfully!');
-      addXP(100); // Bonus XP for importing data
+      addXP(100);
     } catch (error) {
       toast.error(error.message);
     }
   };
-
 
   const handleDeleteBudget = (category) => {
     const shouldDelete = window.confirm(`Are you sure you want to delete budget for "${category}"?`);
@@ -201,16 +231,13 @@ const FinanceApp = () => {
 
   // Modal handlers
   const handleCashAccountTransaction = (transaction) => {
-    // Handle cash or bank account transactions
     let paymentMethod = 'cash';
 
     if (transaction.accountType === 'bank' && transaction.bankAccountId) {
-      // For bank accounts, we use the bank account ID as the payment method
       paymentMethod = transaction.bankAccountId;
     }
 
     if (transaction.type === 'add') {
-      // Add to account balance (record as income)
       const accountTransaction = {
         id: Date.now().toString(),
         type: 'income',
@@ -223,7 +250,6 @@ const FinanceApp = () => {
       };
       addTransaction(accountTransaction);
     } else {
-      // Subtract from account balance (record as expense)
       const accountTransaction = {
         id: Date.now().toString(),
         type: 'expense',
@@ -240,36 +266,88 @@ const FinanceApp = () => {
     checkAchievement("First Transaction");
   };
 
-  const handleTransfer = (transfer) => {
-    // Handle balance transfers between any account types (cash, digital, or bank accounts)
+   const handleTransfer = (transfer) => {
+    // Validate transfer input
+    const validationError = validateTransfer(transfer);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    // Calculate source balance
+    const sourceBalance = calculateAccountBalance(transfer.from);
+    
+    // Check if source has sufficient balance
+    if (transfer.amount > sourceBalance) {
+      toast.error('Saldo tidak mencukupi untuk transfer');
+      return;
+    }
+
+    // Create transfer transactions
+    const timestamp = new Date().toISOString();
+    const date = timestamp.split('T')[0];
     const sourceTransaction = {
-      id: Date.now().toString(),
-      type: 'expense', // Transfer out is always expense from source account
+      id: `transfer_${Date.now()}_out`, // More descriptive ID to avoid conflicts
+      type: 'expense',
       amount: transfer.amount,
       category: 'Transfer Saldo',
       description: transfer.description || `Transfer ke ${getAccountName(transfer.to)}`,
       paymentMethod: transfer.from,
-      date: new Date().toISOString().split('T')[0],
-      timestamp: new Date().toISOString(),
+      date,
+      timestamp,
+      isTransfer: true, // Mark as transfer transaction
     };
 
     const targetTransaction = {
-      id: (Date.now() + 1).toString(),
-      type: 'income', // Transfer in is always income to destination account
+      id: `transfer_${Date.now()}_in`, // More descriptive ID to avoid conflicts
+      type: 'income',
       amount: transfer.amount,
       category: 'Transfer Saldo',
       description: transfer.description || `Transfer dari ${getAccountName(transfer.from)}`,
       paymentMethod: transfer.to,
-      date: new Date().toISOString().split('T')[0],
-      timestamp: new Date().toISOString(),
+      date,
+      timestamp,
+      isTransfer: true, // Mark as transfer transaction
     };
 
+    // Add both transactions
     addTransaction(sourceTransaction);
     addTransaction(targetTransaction);
+    
+    toast.success(`Transfer sebesar ${formatCurrency(transfer.amount)} berhasil dilakukan`);
     addXP(5);
   };
 
-  // Helper function to get account name for display
+  // Helper function to validate transfer input
+  const validateTransfer = (transfer) => {
+    if (!transfer.amount || transfer.amount <= 0) {
+      return 'Jumlah transfer harus lebih besar dari 0';
+    }
+    
+    if (transfer.from === transfer.to) {
+      return 'Akun sumber dan tujuan tidak boleh sama';
+    }
+    
+    return null; // No validation error
+  };
+
+  // Helper function to calculate account balance
+  const calculateAccountBalance = (accountType) => {
+    const accountTransactions = transactions.filter(t => 
+      !t.isTransfer && t.paymentMethod === accountType
+    );
+    
+    const income = accountTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+      
+    const expense = accountTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    return income - expense;
+  };
+
   const getAccountName = (accountType) => {
     if (accountType === 'cash') return 'Tunai';
     if (accountType === 'digital') return 'Digital';
@@ -278,9 +356,7 @@ const FinanceApp = () => {
     return bankAccount ? bankAccount.name : accountType;
   };
 
-  // Enhanced transaction handler with achievement checking
   const handleAddTransaction = (transaction) => {
-    // Validate transaction before adding
     if (!transaction.amount || transaction.amount <= 0) {
       toast.error('Amount must be greater than 0');
       return;
@@ -300,27 +376,23 @@ const FinanceApp = () => {
     addXP(5);
     checkAchievement("First Transaction");
 
-    // Check for budget achievements
     const budgetCount = Object.keys(budgets).length;
     if (budgetCount >= 5) {
       checkAchievement("Budget Master");
     }
   };
 
-  // Enhanced budget handler with achievement checking
   const handleSetBudget = (category, limit) => {
     setBudget(category, parseFloat(limit));
     toast.success(`Budget set successfully!`);
     addXP(10);
     
-    // Check for budget achievements
     const budgetCount = Object.keys(budgets).length;
     if (budgetCount >= 5) {
       checkAchievement("Budget Master");
     }
   };
 
-  // Enhanced recurring transaction handler
   const handleAddRecurring = (recurringData) => {
     addRecurring(recurringData);
     addXP(15);
@@ -407,6 +479,9 @@ const FinanceApp = () => {
         setShowTransferModal={setShowTransferModal}
         setShowAddModal={setShowAddModal}
         setShowBankAccountManager={setShowBankAccountManager}
+        user={user}
+        userProfile={userProfile}
+        onSignOut={signOut}
       />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-8">
@@ -438,6 +513,9 @@ const FinanceApp = () => {
             balance={balance}
             totalIncome={totalIncome}
             totalExpense={totalExpense}
+            cashBalance={cashBalance}
+            digitalBalance={digitalBalance}
+            bankAccountBalances={bankAccountBalances}
           />
         )}
         {activeTab === "budget" && (
@@ -528,7 +606,6 @@ const FinanceApp = () => {
         bankAccounts={bankAccounts}
       />
 
-      {/* Bank Account Manager Modal */}
       <BankAccountManager
         isOpen={showBankAccountManager}
         onClose={() => setShowBankAccountManager(false)}
@@ -554,25 +631,34 @@ const FinanceApp = () => {
           },
           success: {
             style: {
-              background: '#d1fae5', // light green
-              color: '#065f46', // dark green
+              background: '#d1fae5',
+              color: '#065f46',
             },
           },
           error: {
             style: {
-              background: '#fee2e2', // light red
-              color: '#b91c1c', // dark red
+              background: '#fee2e2',
+              color: '#b91c1c',
             },
           },
           custom: {
             style: {
-              background: '#f0f9ff', // light blue
-              color: '#1d4ed8', // dark blue
+              background: '#f0f9ff',
+              color: '#1d4ed8',
             },
           },
         }}
       />
     </>
+  );
+};
+
+// Main App Component with Auth Provider
+const FinanceApp = () => {
+  return (
+    <AuthProvider>
+      <FinanceAppContent />
+    </AuthProvider>
   );
 };
 

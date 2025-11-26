@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ArrowRightLeft, Wallet, CreditCard, Banknote } from 'lucide-react';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../../utils/formatters/formatters';
+import { sendTelegramNotification } from '../../hooks/business/useTransactions';
 
 const TransferModal = ({
   isOpen,
@@ -24,19 +25,30 @@ const TransferModal = ({
     e.preventDefault();
     if (!formData.amount || formData.from === formData.to) return;
 
-    const transfer = {
+    const transfer = createTransferObject(formData);
+    onSubmit(transfer);
+    
+    // Send notification to Telegram bot
+    sendTelegramNotification('transfer', transfer);
+    
+    resetForm();
+  };
+
+  const createTransferObject = (formData) => {
+    return {
       amount: parseFloat(formData.amount),
       from: formData.from,
       to: formData.to,
       description: formData.description,
       timestamp: new Date().toISOString(),
     };
+ };
 
-    onSubmit(transfer);
+  const resetForm = () => {
     setFormData({
       amount: '',
       from: 'cash',
-      to: bankAccounts.length > 0 ? bankAccounts[0].id : 'digital',
+      to: bankAccountBalances.length > 0 ? bankAccountBalances[0].id : 'digital',
       description: ''
     });
     onClose();

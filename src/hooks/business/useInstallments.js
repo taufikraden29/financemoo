@@ -10,6 +10,7 @@ import {
     calculateRemainingDebtRecalculated,
     calculatePaidAmountRecalculated
 } from '../../utils/calculations';
+import { sendTelegramNotification } from './useTransactions';
 
 export const useInstallments = () => {
     const [installments, setInstallments] = useLocalStorage("installments", []);
@@ -43,6 +44,10 @@ export const useInstallments = () => {
         newInstallment.paymentSchedule = generateInstallmentSchedule(newInstallment);
 
         setInstallments(prev => [newInstallment, ...prev]);
+        
+        // Send notification to Telegram bot
+        sendTelegramNotification('installment', newInstallment);
+        
         return newInstallment;
     }, []);
 
@@ -90,6 +95,17 @@ export const useInstallments = () => {
             return installment;
         }));
 
+        // Send notification to Telegram bot
+        if (updatedInstallment) {
+            sendTelegramNotification('installment_payment', {
+                installmentName: updatedInstallment.name,
+                amount: paymentInfo.amountPaid,
+                timestamp: new Date().toISOString(),
+                installmentsPaid: paymentInfo.installmentsPaid,
+                isFullyPaid: paymentInfo.isFullyPaid
+            });
+        }
+
         return { updatedInstallment, paymentInfo };
     }, []);
 
@@ -99,9 +115,16 @@ export const useInstallments = () => {
      * @returns {boolean} Success status
      */
     const deleteInstallment = useCallback((installmentId) => {
+        const deletedInstallment = installments.find(installment => installment.id === installmentId);
         setInstallments(prev => prev.filter(installment => installment.id !== installmentId));
+        
+        // Send notification to Telegram bot
+        if (deletedInstallment) {
+            sendTelegramNotification('installment_delete', deletedInstallment);
+        }
+        
         return true;
-    }, []);
+    }, [installments]);
 
     /**
      * Get installment by ID
@@ -229,6 +252,7 @@ export const useInstallments = () => {
      */
     const updateInstallment = useCallback((installmentId, updates) => {
         let updatedInstallment = null;
+        const oldInstallment = installments.find(installment => installment.id === installmentId);
 
         setInstallments(prev => prev.map(installment => {
             if (installment.id === installmentId) {
@@ -250,8 +274,16 @@ export const useInstallments = () => {
             return installment;
         }));
 
+        // Send notification to Telegram bot
+        if (oldInstallment && updatedInstallment) {
+            sendTelegramNotification('installment_update', {
+                old: oldInstallment,
+                updated: updatedInstallment
+            });
+        }
+
         return updatedInstallment;
-    }, []);
+    }, [installments]);
 
     return {
         // Data

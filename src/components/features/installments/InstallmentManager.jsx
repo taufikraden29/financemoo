@@ -231,10 +231,13 @@ const InstallmentManager = () => {
                 onSubmit={handleAddInstallment}
             />
 
-            {selectedInstallment && (
+            {selectedInstallment && showDetailsModal && (
                 <InstallmentDetails
                     installment={selectedInstallment}
-                    onClose={() => setShowDetailsModal(false)}
+                    onClose={() => {
+                        setShowDetailsModal(false);
+                        setSelectedInstallment(null);
+                    }}
                     onPay={handlePayment}
                 />
             )}

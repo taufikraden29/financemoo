@@ -17,7 +17,14 @@ const CashAccountModal = ({ isOpen, onClose, onSubmit, currentBalance = 0, bankA
     e.preventDefault();
     if (!formData.amount) return;
 
-    const transaction = {
+    const transaction = createCashAccountTransaction(formData, bankAccounts);
+    onSubmit(transaction);
+    
+    resetForm();
+  };
+
+  const createCashAccountTransaction = (formData, bankAccounts) => {
+    return {
       amount: parseFloat(formData.amount),
       type: formData.type,
       description: formData.description,
@@ -25,8 +32,9 @@ const CashAccountModal = ({ isOpen, onClose, onSubmit, currentBalance = 0, bankA
       ...(formData.accountType === 'bank' && { bankAccountId: formData.selectedBankAccount }),
       timestamp: new Date().toISOString(),
     };
+  };
 
-    onSubmit(transaction);
+  const resetForm = () => {
     setFormData({
       amount: '',
       type: 'add',
@@ -35,7 +43,7 @@ const CashAccountModal = ({ isOpen, onClose, onSubmit, currentBalance = 0, bankA
       selectedBankAccount: bankAccounts.length > 0 ? bankAccounts[0].id : 'default'
     });
     onClose();
-  };
+ };
 
   // Calculate new balance based on account type
   let newBalance = currentBalance;
